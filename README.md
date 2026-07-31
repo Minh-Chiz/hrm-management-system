@@ -12,91 +12,85 @@ Hệ thống Quản lý Nhân sự (Human Resource Management System) đa nền 
 * **Giảng viên hướng dẫn (Trường):** TS.Trần Đăng Công - *Khoa CNTT, Đại học Đại Nam*
 ---
 
-## 🌟 Tính năng chính theo Phân quyền (Roles & Features)
+## 📌 Tổng quan kiến trúc Monorepo
 
-### 👑 1. Phân hệ Admin (`app/(admin)`)
-* **Thống kê tổng quan (Dashboard):** Xem chỉ số tổng quan về nhân sự, yêu cầu chờ duyệt, khối lượng công việc toàn công ty (`AdminStatsWidget`).
-* **Quản lý người dùng (User Management):** Danh sách người dùng, thêm mới (`AddUserModal`), chỉnh sửa thông tin (`EditUserModal`), cấp quyền và quản lý tài khoản (`UserManagementTable`).
-* **Phê duyệt đơn từ (Approve Requests):** Duyệt/từ chối các đơn xin nghỉ phép, giải trình chấm công từ nhân viên (`PendingApprovalsList`).
-* **Quản lý công việc (Task Management):** Theo dõi và giám sát tiến độ toàn bộ công việc trong hệ thống.
-
-### 👔 2. Phân hệ Team Lead (`app/(teamlead)`)
-* **Tổng quan nhóm (Team Overview):** Theo dõi trạng thái làm việc và tiến độ công việc của các thành viên trong team (`TeamOverviewCard`).
-* **Giao việc (Task Assignment):** Tạo và phân công công việc mới cho các thành viên với deadline và mức độ ưu tiên (`TaskAssignmentForm`).
-* **Quản lý dự án:** Giám sát danh sách dự án và kết quả thực hiện của nhóm.
-
-### 💼 3. Phân hệ Employee (`app/(employee)`)
-* **Chấm công trực tuyến (Check-in / Check-out):** Tích hợp thẻ chấm công, tính thời gian làm việc thực tế theo ca (`CheckInCard`, `useShiftTimer`).
-* **Quản lý công việc cá nhân:** Xem tóm tắt công việc (`TaskSummaryWidget`), xem danh sách chi tiết (`AllTasksModal`), và cập nhật trạng thái nhiệm vụ (`TaskDetailModal`).
-* **Tạo & Gửi đơn từ:** Tạo đơn xin nghỉ phép, giải trình công việc (`CreateRequestModal`), theo dõi trạng thái phê duyệt (`LeaveRequestWidget`).
-* **Thông báo & Hồ sơ:** Hệ thống thông báo thời gian thực (`NotificationModal`), cập nhật thông tin cá nhân (`EditProfileModal`), cắt/chỉnh ảnh đại diện (`CropImageModal`).
-
----
-
-## 🛠️ Công nghệ sử dụng (Tech Stack)
-
-* **Framework:** React Native, Expo (Expo Router v3+ - File-based Routing)
-* **Ngôn ngữ:** TypeScript
-* **Styling:** NativeWind / Tailwind CSS
-* **Quản lý State:** Zustand (`/store`)
-* **Data Fetching & Caching:** TanStack Query / React Query (`/hooks/queries`)
-* **Form & Validation:** React Hook Form, Zod (`/schemas`)
-* **HTTP Client:** Axios Client (`/services/apiClient.ts`)
-
----
-
-## 📁 Cấu trúc thư mục dự án
+Dự án được tổ chức theo mô hình Monorepo gồm 2 phần chính:
 
 ```text
 hrm-management-system/
-├── app/                      # Luồng màn hình chính (Expo Router)
-│   ├── (admin)/              # Màn hình dành cho Admin (Dashboard, User, Tasks, Requests)
-│   ├── (teamlead)/           # Màn hình dành cho Team Lead (Dashboard, Team Overview)
-│   ├── (employee)/           # Màn hình dành cho Employee (Dashboard, Tasks, Requests)
-│   ├── (tabs)/               # Bottom Navigation Tabs
-│   ├── login/                # Màn hình Đăng nhập & Quên mật khẩu
-│   └── _layout.tsx           # Root Layout & Provider Setup (SafeArea, Auth, QueryClient)
-├── components/               # Components dùng chung (Button, Input, Avatar, AlertBox...)
-├── config/                   # Cấu hình API Endpoint và môi trường
-├── constants/                # Hằng số (Theme, Request Types, Color Codes)
-├── context/                  # React Contexts (AuthContext, DataContext)
-├── features/                 # Components & Logic tách theo từng phân hệ
-│   ├── admin/                # Widgets & Modals riêng của Admin
-│   ├── teamlead/             # Forms & Overviews riêng của Team Lead
-│   └── employee/             # Cards, Modals & Widgets riêng của Employee
-├── hooks/                    # Custom Hooks (Queries, Theme, RealTime Clock...)
-├── schemas/                  # Zod Validation Schemas (Auth, User, Task, Request)
-├── services/                 # API Services, Mock Data, Utilities
-├── store/                    # Zustand Stores (Auth, CheckIn, Task, Request, Notification)
-└── types/                    # Định nghĩa TypeScript Interfaces/Types
+├── mini-hrm/          # Cross-platform Mobile App (React Native / Expo)
+├── server/            # RESTful API Backend (Node.js / Express / Prisma)
+└── README.md
 ```
-## ⚙️ Hướng dẫn Cài đặt & Khởi chạy
-1. Yêu cầu trước khi cài đặt
-   * Node.js: `>= 18.x`
-   * **npm** hoặc **yarn** / **pnpm**
-   * **Expo Go** trên thiết bị di động (hoặc Android Emulator / iOS Simulator)
 
-2. Cài đặt các thư viện
+## 🛠️ Công nghệ sử dụng (Tech Stack)
+**1. Front-end (`mini-hrm/`)**
+* **Framework:** React Native (Expo SDK)
+* **Router:** Expo Router (File-based Routing)
+* **State Management:** Zustand, React Query (TanStack Query)
+* **Form & Validation:** React Hook Form, Zod
+* **UI/UX:** NativeWind (TailwindCSS for React Native), Custom Modals & Components
+
+**2. Back-end (`server/`)**
+* **Runtime & Framework:** Node.js, Express.js (TypeScript)
+* **ORM & Database:** Prisma ORM, SQLite / PostgreSQL
+* **Authentication:** JWT (JSON Web Token), Bcrypt
+* **Architecture:** Controller - Service - Route Pattern, DTO Validation
+
+## 🚀 Hướng dẫn cài đặt & Chạy dự án
+**📋 Yêu cầu hệ thống**
+* **Node.js:** `>= 18.x`
+* **npm** hoặc **yarn**
+* **Expo Go App** trên điện thoại (Android/iOS) hoặc Trình giả lập (Emulator).
+
+**1. Cấu hình & Chạy Back-end Server (`server/`)**
 ```
-# Clone repository về máy
-git clone [https://github.com/minh-chiz/hrm-management-system.git](https://github.com/minh-chiz/hrm-management-system.git)
+# Di chuyển vào thư mục server
+cd server
 
-# Di chuyển vào thư mục dự án
-cd hrm-management-system
-
-# Cài đặt gói phụ thuộc
+# Cài đặt các thư viện
 npm install
+
+# Tạo file môi trường .env (hoặc copy từ .env.example)
+cp .env.example .env
+
+# Chạy Migration cơ sở dữ liệu Prisma
+npx prisma migrate dev --name init
+
+# (Tùy chọn) Seed dữ liệu mẫu ban đầu
+npx prisma db seed
+
+# Khởi chạy server ở chế độ Development
+npm run dev
 ```
-3. Khởi chạy ứng dụng
+*(Server sẽ mặc định chạy tại: `http://localhost:5000`)*
+
+**2. Cấu hình & Chạy Front-end App (`mini-hrm/`)**
 ```
-# Chạy Expo Dev Server
+# Mở một cửa sổ Terminal mới và di chuyển vào thư mục mini-hrm
+cd mini-hrm
+
+# Cài đặt các thư viện
+npm install
+
+# Khởi chạy ứng dụng Expo
 npx expo start
 ```
-   * Nhấn `a` để mở trên Android Emulator.
-   * Nhấn `i` để mở trên iOS Simulator.
-   * Khai báo hoặc quét mã QR bằng ứng dụng Expo Go trên điện thoại thật.
+* **Dùng điện thoại thật:** Quét mã QR hiển thị ở Terminal bằng ứng dụng **Expo Go**.
+* **Dùng giả lập:** Bấm `a` để mở Android Emulator hoặc `i` để mở iOS Simulator.
 
-## 📝 Quy chuẩn Phát triển (Development Standards)
-   * **Kiểm tra cú pháp (Linting):** `npm run lint`
-   * **Kiểm tra kiểu dữ liệu:** `npx tsc --noEmit`
-   * Dự án áp dụng mô hình Feature-driven Architecture giúp mã nguồn sạch sẽ, tách biệt trách nhiệm và dễ mở rộng.
+## ✨ Các tính năng chính
+* **🔐 Xác thực & Phân quyền (Authentication & Authorization):**
+  * Đăng nhập, quên mật khẩu, phân quyền theo vai trò (Admin, Teamlead, Employee).
+* **⏱️ Chấm công (Check-in / Check-out):**
+  * Ghi nhận thời gian ca làm việc, hỗ trợ kiểm tra kết nối WiFi/Vị trí.
+* **📋 Quản lý công việc (Task Management):**
+  * Giao việc, cập nhật tiến độ, danh sách công việc theo dự án và cá nhân.
+* **📄 Yêu cầu & Phê duyệt (Requests & Approvals):**
+  * Tạo đơn xin nghỉ phép/đi muộn/về sớm và ban quản lý phê duyệt trực tiếp.
+* **🔔 Thông báo (Notifications):**
+  * Hệ thống thông báo thời gian thực cho các sự kiện duyệt đơn và phân công việc.
+
+## 📝 Quy chuẩn đóng góp Code (Git Workflow)
+1. Giữ các thông tin nhạy cảm (như `DATABASE_URL`, `JWT_SECRET`) trong file `.env` và **không push** `.env` lên Git.
+2. Viết commit message theo chuẩn Conventional Commits (ví dụ: `feat:`, `fix:`, `refactor:`, `docs:`).
