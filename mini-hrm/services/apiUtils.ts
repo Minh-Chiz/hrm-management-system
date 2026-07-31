@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG } from '@/config/api';
+import { apiClient } from './apiClient';
 import { ApiResponse } from '@/types';
 
-export const TOKEN_STORAGE_KEY = '@hrm_auth_token';
+export { TOKEN_STORAGE_KEY, getAuthToken, setAuthToken, removeAuthToken } from './tokenUtils';
 
 /**
  * Helper to simulate network latency for Mock API calls
@@ -11,73 +11,38 @@ export const simulateDelay = (ms: number = 300): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-export const getAuthToken = async (): Promise<string | null> => {
-  try {
-    return await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-};
 
-export const setAuthToken = async (token: string): Promise<void> => {
-  try {
-    await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
-  } catch (e) {
-    console.error('Failed to save auth token:', e);
-  }
-};
-
-export const removeAuthToken = async (): Promise<void> => {
-  try {
-    await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
-  } catch (e) {
-    console.error('Failed to remove auth token:', e);
-  }
-};
 
 /**
- * Helper for making authenticated HTTP requests to real Backend API
+ * Helper for making authenticated HTTP requests to real Backend API using centralized Axios client
  */
 export async function fetchWithAuth<T = any>(
   endpoint: string,
-  options: RequestInit = {}
+  options: { method?: string; body?: string; headers?: Record<string, string> } = {}
 ): Promise<ApiResponse<T>> {
   try {
-    const token = await getAuthToken();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
-    };
+    const method = (options.method || 'GET').toLowerCase();
+    const data = options.body ? JSON.parse(options.body) : undefined;
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const url = endpoint.startsWith('http')
-      ? endpoint
-      : `${API_CONFIG.BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-
-    const response = await fetch(url, {
-      ...options,
-      headers,
+    const response = await apiClient.request<ApiResponse<T>>({
+      url: endpoint,
+      method,
+      data,
+      headers: options.headers,
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.data) {
       return {
         success: false,
-        message: data.message || data.error || `HTTP error ${response.status}`,
-        statusCode: response.status,
+        message: error.response.data.message || error.response.data.error || `HTTP error ${error.response.status}`,
+        statusCode: error.response.status,
       };
     }
-
-    return data;
-  } catch (error: any) {
     return {
       success: false,
       message: error.message || 'Lỗi kết nối tới máy chủ API.',
     };
   }
 }
-

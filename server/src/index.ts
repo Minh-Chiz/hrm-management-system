@@ -9,6 +9,7 @@ import userRoutes from './routes/userRoutes';
 import taskRoutes from './routes/taskRoutes';
 import requestRoutes from './routes/requestRoutes';
 import checkInRoutes from './routes/checkInRoutes';
+import notificationRoutes from './routes/notificationRoutes';
 import { errorHandler, AppError } from './middlewares/errorHandler';
 import { sendSuccess } from './utils/response';
 
@@ -44,6 +45,7 @@ app.get('/', (_req: Request, res: Response) => {
       tasks: '/api/tasks',
       requests: '/api/requests',
       checkin: '/api/checkin',
+      notifications: '/api/notifications',
     },
   }, 'Server Mini HRM & Task Manager đang chạy ngon lành!');
 });
@@ -54,6 +56,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/checkin', checkInRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 Handler
 app.use((_req: Request, _res: Response, next: NextFunction) => {
@@ -93,6 +96,11 @@ app.listen(PORT, () => {
   console.log(`   ⏰ POST   /api/checkin`);
   console.log(`   📅 GET    /api/checkin/today`);
   console.log(`   📜 GET    /api/checkin/history`);
+  console.log('   ──────────────────────────────────────────');
+  console.log(`   🔔 GET    /api/notifications`);
+  console.log(`   ➕ POST   /api/notifications`);
+  console.log(`   ✏️  PATCH  /api/notifications/:id/read`);
+  console.log(`   ✏️  PATCH  /api/notifications/read-all`);
   console.log('🚀 ══════════════════════════════════════════');
   console.log(`   ⏱️  Khởi động: ${new Date().toLocaleString('vi-VN')}`);
   console.log('');

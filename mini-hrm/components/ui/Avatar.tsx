@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Image, Text, StyleSheet } from 'react-native';
+import { View, Image, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 export interface AvatarProps {
-  uri: string;
+  uri?: string;
+  name?: string;
   size?: 'sm' | 'md' | 'lg' | number;
   showBadge?: boolean;
   badgeIcon?: keyof typeof MaterialIcons.glyphMap;
@@ -13,14 +14,24 @@ export interface AvatarProps {
   className?: string;
 }
 
+const getInitials = (text?: string): string => {
+  if (!text) return '??';
+  const clean = text.trim();
+  if (clean.startsWith('http') || clean.startsWith('data:') || clean.startsWith('file:')) return '??';
+  const parts = clean.split(' ').filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 export const Avatar: React.FC<AvatarProps> = ({
   uri,
+  name,
   size = 'md',
   showBadge = false,
   badgeIcon = 'star',
   border = false,
   borderWidth = 1,
-  borderColor = 'rgba(132, 147, 150, 0.5)', // default outline color
+  borderColor = 'rgba(132, 147, 150, 0.5)',
   className = '',
 }) => {
   // Determine pixel size
@@ -64,13 +75,21 @@ export const Avatar: React.FC<AvatarProps> = ({
     right: -badgeSize * 0.15,
   };
 
-  const isImageUri = uri && (uri.startsWith('http') || uri.startsWith('data:image') || uri.startsWith('file:') || uri.startsWith('ph:'));
+  const avatarSource = uri || name || '';
+  const isImageUri =
+    typeof avatarSource === 'string' &&
+    (avatarSource.startsWith('http') ||
+      avatarSource.startsWith('data:image') ||
+      avatarSource.startsWith('file:') ||
+      avatarSource.startsWith('ph:'));
+
+  const initials = getInitials(name || uri);
 
   return (
     <View style={[containerStyle]} className={`relative ${className}`}>
       {isImageUri ? (
         <Image
-          source={{ uri }}
+          source={{ uri: avatarSource }}
           style={[
             avatarStyle,
             border && {
@@ -96,24 +115,32 @@ export const Avatar: React.FC<AvatarProps> = ({
             },
           ]}
         >
-          <Text style={{ color: '#00e5ff', fontWeight: '700', fontSize: Math.max(10, Math.floor(pixelSize * 0.38)) }}>
-            {uri || '??'}
+          <Text
+            style={{
+              color: '#00e5ff',
+              fontWeight: '700',
+              fontSize: Math.max(10, Math.floor(pixelSize * 0.38)),
+            }}
+          >
+            {initials}
           </Text>
         </View>
       )}
-      
+
       {showBadge && (
         <View
           style={badgeStyle}
           className="absolute bg-brand-warning-container items-center justify-center shadow-sm"
         >
-          <MaterialIcons 
-            name={badgeIcon} 
-            size={Math.floor(badgeSize * 0.7)} 
-            color="#221b00" // text-on-tertiary-container / dark gold
+          <MaterialIcons
+            name={badgeIcon}
+            size={Math.floor(badgeSize * 0.7)}
+            color="#221b00"
           />
         </View>
       )}
     </View>
   );
 };
+
+export default Avatar;

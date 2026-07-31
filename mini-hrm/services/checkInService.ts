@@ -2,18 +2,58 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '@/config/api';
 import { ApiResponse, CheckInRecord, CreateCheckInPayload } from '@/types';
 import { simulateDelay, fetchWithAuth } from './apiUtils';
+import {
+  evaluateCheckInStatus,
+  evaluateCheckOutStatus,
+  formatMinutesToText,
+} from '@/constants/shifts';
 
 const STORAGE_KEY_CHECKINS = '@hrm_checkins';
 
-const mapBackendCheckInToRecord = (item: any): CheckInRecord => ({
-  id: String(item.id),
-  userId: String(item.userId),
-  userName: item.user ? item.user.name : item.userName,
-  type: item.type as 'in' | 'out',
-  time: item.time,
-  date: item.date,
-  shiftName: item.shiftName || 'Ca Sáng',
-});
+const mapBackendCheckInToRecord = (item: any): CheckInRecord => {
+  const shiftName = item.shiftName || 'Ca Sáng';
+  const type = item.type as 'in' | 'out';
+  const time = item.time;
+
+  let status = item.status;
+  let lateMinutes = item.lateMinutes;
+  let earlyMinutes = item.earlyMinutes;
+  let note = item.note;
+
+  if (!status) {
+    if (type === 'in') {
+      const evalRes = evaluateCheckInStatus(shiftName, time);
+      status = evalRes.status;
+      lateMinutes = evalRes.lateMinutes;
+      if (status === 'LATE' && !note) {
+        note = `Điểm danh muộn ${formatMinutesToText(lateMinutes)} so với giờ bắt đầu ca.`;
+      }
+    } else {
+      const evalRes = evaluateCheckOutStatus(shiftName, time);
+      status = evalRes.status;
+      earlyMinutes = evalRes.earlyMinutes;
+      if (status === 'EARLY_LEAVE' && !note) {
+        note = `Check-out sớm ${formatMinutesToText(earlyMinutes)} khi chưa kết thúc ca.`;
+      }
+    }
+  }
+
+  return {
+    id: String(item.id),
+    userId: String(item.userId),
+    userName: item.user ? item.user.name : item.userName,
+    type,
+    time,
+    date: item.date,
+    shiftName,
+    status,
+    lateMinutes,
+    earlyMinutes,
+    wifiSSID: item.wifiSSID,
+    isCompanyWifi: item.isCompanyWifi,
+    note,
+  };
+};
 
 export const checkInService = {
   /**
@@ -57,7 +97,15 @@ export const checkInService = {
         time: payload.time,
         date: payload.date,
         shiftName: payload.shiftName || 'Ca Sáng',
+        status: payload.status,
+        lateMinutes: payload.lateMinutes,
+        earlyMinutes: payload.earlyMinutes,
+        wifiSSID: payload.wifiSSID,
+        isCompanyWifi: payload.isCompanyWifi,
+        note: payload.note,
       };
+
+
 
       const updated = [newRecord, ...checkIns];
       await AsyncStorage.setItem(STORAGE_KEY_CHECKINS, JSON.stringify(updated));
@@ -65,8 +113,15 @@ export const checkInService = {
     } else {
       const createRes = await fetchWithAuth<any>('/checkin', {
         method: 'POST',
-        body: JSON.stringify({ time: payload.time, shiftName: payload.shiftName }),
+        body: JSON.stringify({
+          time: payload.time,
+          shiftName: payload.shiftName,
+          status: payload.status,
+          lateMinutes: payload.lateMinutes,
+          earlyMinutes: payload.earlyMinutes,
+        }),
       });
+
 
       if (createRes.success) {
         return await this.getCheckIns();

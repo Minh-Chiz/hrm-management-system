@@ -1,12 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Alert } from 'react-native';
+import React, { createContext, useContext, useEffect, useCallback, ReactNode } from 'react';
 import {
-  userService,
-  taskService,
-  requestService,
-  checkInService,
-  notificationService,
-} from '@/services';
+  useEmployeeStore,
+  useTaskStore,
+  useRequestStore,
+  useCheckInStore,
+  useNotificationStore,
+} from '@/store';
 import { Employee, Task, PendingRequest, CheckInRecord, AppNotification, CreateNotificationPayload } from '@/types';
 import { useAuth } from './AuthContext';
 
@@ -43,216 +42,83 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [requests, setRequests] = useState<PendingRequest[]>([]);
-  const [checkIns, setCheckIns] = useState<CheckInRecord[]>([]);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Initial & Dynamic Data Fetch via Service Layer
-  const loadAllData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [empRes, taskRes, reqRes, checkInRes, notiRes] = await Promise.all([
-        userService.getEmployees(),
-        taskService.getTasks(),
-        requestService.getRequests(),
-        checkInService.getCheckIns(),
-        notificationService.getNotifications(),
-      ]);
+  const employees = useEmployeeStore((s) => s.employees);
+  const fetchEmployees = useEmployeeStore((s) => s.fetchEmployees);
+  const addEmp = useEmployeeStore((s) => s.addEmployee);
+  const updateEmp = useEmployeeStore((s) => s.updateEmployee);
+  const deleteEmp = useEmployeeStore((s) => s.deleteEmployee);
 
-      if (empRes.success && empRes.data) setEmployees(empRes.data);
-      if (taskRes.success && taskRes.data) setTasks(taskRes.data);
-      if (reqRes.success && reqRes.data) setRequests(reqRes.data);
-      if (checkInRes.success && checkInRes.data) setCheckIns(checkInRes.data);
-      if (notiRes.success && notiRes.data) setNotifications(notiRes.data);
-    } catch (e) {
-      console.error('Lỗi khi tải dữ liệu từ Service API Layer:', e);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const tasks = useTaskStore((s) => s.tasks);
+  const fetchTasks = useTaskStore((s) => s.fetchTasks);
+  const addTaskStore = useTaskStore((s) => s.addTask);
+  const addMasterProjStore = useTaskStore((s) => s.addMasterProject);
+  const advanceMasterStore = useTaskStore((s) => s.advanceMasterPipelineStage);
+  const handoverTaskStore = useTaskStore((s) => s.handoverTaskStage);
+  const updateTaskStatusStore = useTaskStore((s) => s.updateTaskStatus);
+  const updateTaskProgressStore = useTaskStore((s) => s.updateTaskProgress);
+  const deleteTaskStore = useTaskStore((s) => s.deleteTask);
+  const updateTaskStore = useTaskStore((s) => s.updateTask);
+
+  const requests = useRequestStore((s) => s.requests);
+  const fetchRequests = useRequestStore((s) => s.fetchRequests);
+  const addRequestStore = useRequestStore((s) => s.addRequest);
+  const updateRequestStatusStore = useRequestStore((s) => s.updateRequestStatus);
+
+  const checkIns = useCheckInStore((s) => s.checkIns);
+  const fetchCheckIns = useCheckInStore((s) => s.fetchCheckIns);
+  const addCheckInStore = useCheckInStore((s) => s.addCheckIn);
+
+  const notifications = useNotificationStore((s) => s.notifications);
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
+  const addNotiStore = useNotificationStore((s) => s.addNotification);
+  const markNotiReadStore = useNotificationStore((s) => s.markNotificationAsRead);
+  const markAllNotiReadStore = useNotificationStore((s) => s.markAllNotificationsAsRead);
+
+  const isEmpLoading = useEmployeeStore((s) => s.isLoading);
+  const isTaskLoading = useTaskStore((s) => s.isLoading);
+  const isReqLoading = useRequestStore((s) => s.isLoading);
+  const isCheckInLoading = useCheckInStore((s) => s.isLoading);
+  const isNotiLoading = useNotificationStore((s) => s.isLoading);
+
+  const isLoading = isEmpLoading || isTaskLoading || isReqLoading || isCheckInLoading || isNotiLoading;
+
+  const refreshData = useCallback(async () => {
+    await Promise.all([
+      fetchEmployees(),
+      fetchTasks(),
+      fetchRequests(),
+      fetchCheckIns(),
+      fetchNotifications(),
+    ]);
+  }, [fetchEmployees, fetchTasks, fetchRequests, fetchCheckIns, fetchNotifications]);
 
   useEffect(() => {
-    loadAllData();
-  }, [user?.email, user?.role, loadAllData]);
+    refreshData();
+  }, [user?.email, user?.role, refreshData]);
 
-  // ─── Service Handlers ─────────────────────────────────────────────────────────
-
-  const addEmployee = async (
-    name: string,
-    email: string,
-    password: string,
-    role: 'employee' | 'teamlead',
-    specialization: string
-  ) => {
-    const res = await userService.addEmployee({ name, email, password, role, specialization });
-    if (res.success && res.data) setEmployees(res.data);
-  };
-
-  const updateEmployee = async (id: string, updatedFields: Partial<Employee>) => {
-    const res = await userService.updateEmployee(id, updatedFields);
-    if (res.success && res.data) setEmployees(res.data);
-  };
-
-  const deleteEmployee = async (id: string) => {
-    const res = await userService.deleteEmployee(id);
-    if (res.success && res.data) setEmployees(res.data);
-  };
-
-  const addTask = async (
-    title: string,
-    assigneeId: string,
-    supporters: string[],
-    deadline: string,
-    pipelineStage?: Task['pipelineStage'],
-    budget?: string
-  ) => {
-    const res = await taskService.createTask({ title, assigneeId, supporters, deadline, pipelineStage, budget }, employees);
-    if (res.success && res.data) setTasks(res.data);
+  const addTask = async (title: string, assigneeId: string, supporters: string[], deadline: string, pipelineStage?: Task['pipelineStage'], budget?: string) => {
+    await addTaskStore(title, assigneeId, supporters, deadline, employees, pipelineStage, budget);
   };
 
   const addMasterProject = async (title: string, deadline: string, budget?: string, creatorId?: string, creatorName?: string) => {
-    const res = await taskService.createMasterProject(title, deadline, employees, budget, creatorId, creatorName);
-    if (res.success && res.data) setTasks(res.data);
+    await addMasterProjStore(title, deadline, employees, budget, creatorId, creatorName);
   };
 
-  const advanceMasterPipelineStage = async (
-    masterTaskId: string,
-    currentStage: Task['pipelineStage'],
-    approvedBy: string,
-    customTitle?: string
-  ) => {
-    const res = await taskService.advanceMasterPipelineStage(
-      masterTaskId,
-      currentStage,
-      approvedBy,
-      customTitle,
-      employees
-    );
-    if (res.success && res.data) setTasks(res.data);
+  const advanceMasterPipelineStage = async (masterTaskId: string, currentStage: Task['pipelineStage'], approvedBy: string, customTitle?: string) => {
+    await advanceMasterStore(masterTaskId, currentStage, approvedBy, employees, customTitle);
   };
 
-  const handoverTaskStage = async (
-    id: string,
-    toStage: Task['pipelineStage'],
-    approvedBy: string,
-    nextAssigneeId?: string
-  ) => {
-    const res = await taskService.handoverTaskStage(id, toStage, approvedBy, nextAssigneeId, employees);
-    if (res.success && res.data) setTasks(res.data);
-  };
-
-  const updateTaskStatus = async (
-    id: string,
-    status: Task['status'],
-    statusType: Task['statusType']
-  ) => {
-    const res = await taskService.updateTaskStatus(id, status, statusType);
-    if (res.success && res.data) setTasks(res.data);
-  };
-
-  const updateTaskProgress = async (id: string, progress: number) => {
-    const res = await taskService.updateTaskProgress(id, progress);
-    if (res.success && res.data) setTasks(res.data);
-  };
-
-  const deleteTask = async (id: string) => {
-    const res = await taskService.deleteTask(id);
-    if (res.success && res.data) setTasks(res.data);
+  const handoverTaskStage = async (id: string, toStage: Task['pipelineStage'], approvedBy: string, nextAssigneeId?: string) => {
+    await handoverTaskStore(id, toStage, approvedBy, employees, nextAssigneeId);
   };
 
   const updateTask = async (id: string, updatedFields: Partial<Task>) => {
-    const res = await taskService.updateTask(id, updatedFields, employees);
-    if (res.success && res.data) setTasks(res.data);
-  };
-
-  const addRequest = async (
-    senderId: string,
-    senderName: string,
-    role: string,
-    type: PendingRequest['type'],
-    description: string,
-    reason: string,
-    date: string,
-    hasAttachment?: boolean,
-    attachmentName?: string
-  ) => {
-    const res = await requestService.createRequest({
-      senderId,
-      senderName,
-      role,
-      type,
-      description,
-      reason,
-      date,
-      hasAttachment,
-      attachmentName,
-    });
-    if (res.success && res.data) setRequests(res.data);
-  };
-
-  const addNotification = async (payload: CreateNotificationPayload) => {
-    const res = await notificationService.addNotification(payload);
-    if (res.success && res.data) setNotifications(res.data);
-  };
-
-  const markNotificationAsRead = async (id: string) => {
-    const res = await notificationService.markAsRead(id);
-    if (res.success && res.data) setNotifications(res.data);
-  };
-
-  const markAllNotificationsAsRead = async (userId: string) => {
-    const res = await notificationService.markAllAsRead(userId);
-    if (res.success && res.data) setNotifications(res.data);
+    await updateTaskStore(id, updatedFields, employees);
   };
 
   const updateRequestStatus = async (id: string, status: PendingRequest['status']) => {
-    // Find target request before updating to get sender info
-    const targetReq = requests.find(r => r.id === id);
-
-    const res = await requestService.updateRequestStatus(id, status);
-    if (res.success && res.data) {
-      setRequests(res.data);
-
-      // Auto dispatch notification to sender if status is approved or rejected
-      if (targetReq && (status === 'approved' || status === 'rejected')) {
-        const isApproved = status === 'approved';
-        await addNotification({
-          userId: targetReq.senderId,
-          title: isApproved ? 'Đơn được duyệt 🎉' : 'Đơn bị từ chối ❌',
-          message: isApproved
-            ? `Đơn xin ${targetReq.type} ngày ${targetReq.date} của bạn đã được duyệt.`
-            : `Đơn xin ${targetReq.type} ngày ${targetReq.date} của bạn đã bị từ chối.`,
-          type: isApproved ? 'request_approved' : 'request_rejected',
-          icon: isApproved ? 'check-circle' : 'cancel',
-          iconColor: isApproved ? '#05e777' : '#ffb4ab',
-          requestId: id,
-        });
-      }
-    }
-  };
-
-  const addCheckIn = async (
-    userId: string,
-    userName: string,
-    type: 'in' | 'out',
-    time: string,
-    date: string,
-    shiftName?: string
-  ) => {
-    const res = await checkInService.addCheckIn({ userId, userName, type, time, date, shiftName });
-    if (res.success && res.data) {
-      setCheckIns(res.data);
-      Alert.alert(
-        type === 'in' ? `Check-in ${shiftName ? `[${shiftName}] ` : ''}thành công! ✅` : `Check-out ${shiftName ? `[${shiftName}] ` : ''}thành công! ✅`,
-        `Ghi nhận lúc: ${time}`,
-        [{ text: 'Đã rõ' }]
-      );
-    } else {
-      Alert.alert('Điểm danh không thành công', res.message || 'Không thể thực hiện điểm danh.', [{ text: 'Đã rõ' }]);
-    }
+    await updateRequestStatusStore(id, status, addNotiStore);
   };
 
   return (
@@ -264,24 +130,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
         checkIns,
         notifications,
         isLoading,
-        refreshData: loadAllData,
-        addEmployee,
-        updateEmployee,
-        deleteEmployee,
+        refreshData,
+        addEmployee: addEmp,
+        updateEmployee: updateEmp,
+        deleteEmployee: deleteEmp,
         addTask,
         addMasterProject,
         advanceMasterPipelineStage,
         handoverTaskStage,
-        updateTaskStatus,
-        updateTaskProgress,
-        deleteTask,
+        updateTaskStatus: updateTaskStatusStore,
+        updateTaskProgress: updateTaskProgressStore,
+        deleteTask: deleteTaskStore,
         updateTask,
-        addRequest,
+        addRequest: addRequestStore,
         updateRequestStatus,
-        addCheckIn,
-        addNotification,
-        markNotificationAsRead,
-        markAllNotificationsAsRead,
+        addCheckIn: addCheckInStore,
+        addNotification: addNotiStore,
+        markNotificationAsRead: markNotiReadStore,
+        markAllNotificationsAsRead: markAllNotiReadStore,
       }}
     >
       {children}

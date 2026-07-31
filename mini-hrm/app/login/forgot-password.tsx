@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
@@ -13,13 +12,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { AlertBox } from '@/components/ui/AlertBox';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ControlledInput } from '@/components/ui/ControlledInput';
+import { forgotPasswordSchema, ForgotPasswordFormData } from '@/schemas/authSchema';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+
+  const { control, handleSubmit } = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      email: '',
+    },
+  });
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -29,24 +35,10 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  const handleSendRequest = () => {
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setError('Vui lòng nhập email.');
-      return;
-    }
-
-    if (!trimmedEmail.includes('@')) {
-      setError('Định dạng email không hợp lệ.');
-      return;
-    }
-
-    setError('');
-    setSuccess(true);
-
+  const onSubmit = (data: ForgotPasswordFormData) => {
     Alert.alert(
       'Thành công',
-      'Liên kết đặt lại mật khẩu đã được gửi đến email của bạn!',
+      `Liên kết đặt lại mật khẩu đã được gửi đến email ${data.email}!`,
       [
         {
           text: 'OK',
@@ -93,43 +85,23 @@ export default function ForgotPasswordScreen() {
             </Text>
 
             {/* Email input field */}
-            <View className="mb-6 w-full">
-              <Text className="text-brand-on-surface text-sm font-semibold mb-2 pl-1">
-                Email
-              </Text>
-              <View className="flex-row items-center bg-brand-card rounded-lg border border-brand-outline-variant px-4 h-14 w-full">
-                <View className="mr-3">
-                  <MaterialIcons name="mail-outline" size={20} color="#849396" />
-                </View>
-                <TextInput
-                  className="flex-1 text-brand-on-surface text-base h-full"
-                  placeholder="Nhập email của bạn"
-                  placeholderTextColor="#849396"
-                  value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    if (error) setError('');
-                  }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSendRequest}
-                />
-              </View>
-            </View>
-
-            {/* Error message */}
-            {error ? (
-              <View className="mb-6 w-full">
-                <AlertBox message={error} />
-              </View>
-            ) : null}
+            <ControlledInput<ForgotPasswordFormData>
+              name="email"
+              control={control}
+              label="Email"
+              placeholder="Nhập email của bạn"
+              icon="mail-outline"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit(onSubmit)}
+            />
 
             {/* Action button */}
             <View className="w-full">
               <TouchableOpacity
-                onPress={handleSendRequest}
+                onPress={handleSubmit(onSubmit)}
                 className="w-full h-14 bg-brand-neon rounded-xl items-center justify-center active:scale-95 transition-all"
                 activeOpacity={0.7}
               >

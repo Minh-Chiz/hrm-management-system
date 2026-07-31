@@ -1,3 +1,5 @@
+export type CheckInStatus = 'ON_TIME' | 'LATE' | 'EARLY_LEAVE' | 'NORMAL';
+
 export interface CheckInRecord {
   id: string;
   userId: string;
@@ -6,6 +8,12 @@ export interface CheckInRecord {
   time: string;
   date: string;
   shiftName?: string;
+  status?: CheckInStatus;
+  lateMinutes?: number;
+  earlyMinutes?: number;
+  wifiSSID?: string;
+  isCompanyWifi?: boolean;
+  note?: string;
 }
 
 export interface CreateCheckInPayload {
@@ -15,4 +23,13 @@ export interface CreateCheckInPayload {
   time: string;
   date: string;
   shiftName?: string;
+  status?: CheckInStatus;
+  lateMinutes?: number;
+  earlyMinutes?: number;
+  wifiSSID?: string;
+  isCompanyWifi?: boolean;
+  note?: string;
 }
+
+
+

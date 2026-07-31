@@ -292,11 +292,16 @@ export const taskService = {
       await AsyncStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(updated));
       return { success: true, data: updated, message: 'Phân công công việc thành công' };
     } else {
+      const parsedAssigneeId = payload.assigneeId ? parseInt(payload.assigneeId, 10) : NaN;
+      if (!payload.assigneeId || isNaN(parsedAssigneeId)) {
+        return { success: false, message: 'Vui lòng chọn người phụ trách hợp lệ trước khi tạo công việc.' };
+      }
+
       const createRes = await fetchWithAuth<any>('/tasks', {
         method: 'POST',
         body: JSON.stringify({
           title: payload.title,
-          assigneeId: parseInt(payload.assigneeId, 10) || 1,
+          assigneeId: parsedAssigneeId,
           supporters: payload.supporters,
           deadline: payload.deadline,
           pipelineStage: payload.pipelineStage,
@@ -493,12 +498,14 @@ export const taskService = {
       await AsyncStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(updated));
       return { success: true, data: updated, message: `Đã bàn giao sang giai đoạn ${toStage}` };
     } else {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/tasks/${id}/handover`, {
+      const res = await fetchWithAuth<any>(`/tasks/${id}/handover`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ toStage, approvedBy, nextAssigneeId }),
       });
-      return await response.json();
+      if (res.success) {
+        return await this.getTasks();
+      }
+      return { success: false, message: res.message };
     }
   },
 
@@ -588,12 +595,14 @@ export const taskService = {
         message: 'Tạo Dự án Lớn & Chặng Thiết kế thành công!',
       };
     } else {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/tasks/master`, {
+      const res = await fetchWithAuth<any>('/tasks/master', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, deadline }),
       });
-      return await response.json();
+      if (res.success) {
+        return await this.getTasks();
+      }
+      return { success: false, message: res.message };
     }
   },
 
@@ -746,15 +755,14 @@ export const taskService = {
             : `Đã tự động bàn giao Dự án sang giai đoạn ${nextStage}!`,
       };
     } else {
-      const response = await fetch(
-        `${API_CONFIG.BASE_URL}/tasks/master/${masterTaskId}/advance`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ currentStage, approvedBy, customTitle }),
-        }
-      );
-      return await response.json();
+      const res = await fetchWithAuth<any>(`/tasks/master/${masterTaskId}/advance`, {
+        method: 'POST',
+        body: JSON.stringify({ currentStage, approvedBy, customTitle }),
+      });
+      if (res.success) {
+        return await this.getTasks();
+      }
+      return { success: false, message: res.message };
     }
   },
 
@@ -830,15 +838,14 @@ export const taskService = {
         message: `Đã cập nhật tiến độ ${progress}%`,
       };
     } else {
-      const response = await fetch(
-        `${API_CONFIG.BASE_URL}/tasks/${id}/progress`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ progress }),
-        }
-      );
-      return await response.json();
+      const res = await fetchWithAuth<any>(`/tasks/${id}/progress`, {
+        method: 'PATCH',
+        body: JSON.stringify({ progress }),
+      });
+      if (res.success) {
+        return await this.getTasks();
+      }
+      return { success: false, message: res.message };
     }
   },
 };

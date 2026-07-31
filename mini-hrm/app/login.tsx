@@ -1,8 +1,4 @@
-import { AlertBox } from '@/components/ui/AlertBox';
-import { useAuth } from '@/context/AuthContext';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -10,26 +6,51 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertBox } from '@/components/ui/AlertBox';
+import { ControlledInput } from '@/components/ui/ControlledInput';
+import { useAuth } from '@/context/AuthContext';
+import { loginSchema, LoginFormData } from '@/schemas/authSchema';
 
 export default function LoginScreen() {
-  const { login, isLoading, error } = useAuth();
+  const { login, isLoading, error, clearError } = useAuth();
   const router = useRouter();
-
-
-
-  const [companyCode, setCompanyCode] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = () => {
-    login(companyCode, username, password);
-  };
+  const { control, handleSubmit } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      companyCode: '',
+      username: '',
+      password: '',
+    },
+  });
+
+  // useWatch chỉ subscribe đúng các field cần, không re-render toàn bộ form mỗi keystroke
+  const [companyCodeVal, usernameVal, passwordVal] = useWatch({
+    control,
+    name: ['companyCode', 'username', 'password'],
+  });
+  useEffect(() => {
+    if (error) {
+      clearError();
+    }
+  }, [companyCodeVal, usernameVal, passwordVal, clearError]);
+
+  const onSubmit = useCallback((data: LoginFormData) => {
+    login(data.companyCode, data.username, data.password);
+  }, [login]);
+
+  const handleTogglePassword = useCallback(() => {
+    setShowPassword((prev) => !prev);
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -69,90 +90,51 @@ export default function LoginScreen() {
             ) : null}
 
             {/* Company Code Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Mã công ty</Text>
-              <View style={styles.inputWrapper}>
-                <MaterialIcons
-                  name="business"
-                  size={18}
-                  color="#849396"
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="VD: VP"
-                  placeholderTextColor="#849396"
-                  value={companyCode}
-                  onChangeText={setCompanyCode}
-                  autoCapitalize="characters"
-                  returnKeyType="next"
-                />
-              </View>
-            </View>
+            <ControlledInput<LoginFormData>
+              name="companyCode"
+              control={control}
+              label="MÃ CÔNG TY"
+              placeholder="VD: VP"
+              icon="business"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              returnKeyType="next"
+            />
 
             {/* Username Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Tên đăng nhập</Text>
-              <View style={styles.inputWrapper}>
-                <MaterialIcons
-                  name="person-outline"
-                  size={18}
-                  color="#849396"
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nhập tên đăng nhập"
-                  placeholderTextColor="#849396"
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                  returnKeyType="next"
-                />
-              </View>
-            </View>
+            <ControlledInput<LoginFormData>
+              name="username"
+              control={control}
+              label="TÊN ĐĂNG NHẬP"
+              placeholder="Nhập tên đăng nhập"
+              icon="person-outline"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="next"
+            />
 
             {/* Password Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Mật khẩu</Text>
-              <View style={styles.inputWrapper}>
-                <MaterialIcons
-                  name="lock-outline"
-                  size={18}
-                  color="#849396"
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={[styles.input, styles.passwordInput]}
-                  placeholder="Nhập mật khẩu"
-                  placeholderTextColor="#849396"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  returnKeyType="done"
-                  onSubmitEditing={handleLogin}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeButton}
-                  activeOpacity={0.7}
-                >
-                  <MaterialIcons
-                    name={showPassword ? 'visibility' : 'visibility-off'}
-                    size={18}
-                    color="#849396"
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
+            <ControlledInput<LoginFormData>
+              name="password"
+              control={control}
+              label="MẬT KHẨU"
+              placeholder="Nhập mật khẩu"
+              icon="lock-outline"
+              rightIcon={showPassword ? 'visibility' : 'visibility-off'}
+              onRightIconPress={handleTogglePassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit(onSubmit)}
+            />
 
             {/* Forgot Password */}
             <View style={styles.forgotPasswordContainer}>
               <TouchableOpacity
                 onPress={() => router.push('/login/forgot-password')}
-                className="active:scale-95 transition-all"
                 activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
               </TouchableOpacity>
@@ -161,7 +143,7 @@ export default function LoginScreen() {
             {/* Login Button */}
             <TouchableOpacity
               style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
+              onPress={handleSubmit(onSubmit)}
               disabled={isLoading}
               activeOpacity={0.85}
             >
@@ -187,9 +169,11 @@ export default function LoginScreen() {
               <Text style={styles.hintRow}>
                 <Text style={styles.hintLabel}>Nhân viên: </Text>nhanvien / user123
               </Text>
+              <Text style={[styles.hintRow, { marginTop: 6, color: '#5a7275', fontSize: 11 }]}>
+                * Nhập phần trước @ của email (vd: admin)
+              </Text>
             </View>
           </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -210,8 +194,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 32,
   },
-
-  /* Brand */
   brandSection: {
     alignItems: 'center',
     marginBottom: 32,
@@ -244,8 +226,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     letterSpacing: 0.3,
   },
-
-  /* Card */
   card: {
     backgroundColor: '#151d1e',
     borderRadius: 20,
@@ -269,63 +249,19 @@ const styles = StyleSheet.create({
     color: '#849396',
     marginBottom: 24,
   },
-
-  /* Alert */
   alertWrapper: {
     marginBottom: 16,
   },
-
-  /* Inputs */
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#bac9cc',
-    marginBottom: 6,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#192122',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#3b494c',
-    paddingHorizontal: 12,
-    height: 48,
-  },
-  inputIcon: {
-    marginRight: 8,
-  },
-  input: {
-    flex: 1,
-    color: '#dce4e5',
-    fontSize: 14,
-    height: '100%',
-  },
-  passwordInput: {
-    paddingRight: 4,
-  },
-  eyeButton: {
-    padding: 4,
-  },
-
-  /* Forgot Password */
   forgotPasswordContainer: {
     alignSelf: 'flex-end',
-    marginBottom: 16,
-    marginTop: -4,
+    marginTop: 4,
+    marginBottom: 20,
   },
   forgotPasswordText: {
     color: '#00e5ff',
     fontSize: 13,
     fontWeight: '600',
   },
-
-  /* Login Button */
   loginButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -334,7 +270,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#00e5ff',
     borderRadius: 10,
     height: 50,
-    marginTop: 8,
     shadowColor: '#00e5ff',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
@@ -350,8 +285,6 @@ const styles = StyleSheet.create({
     color: '#00363d',
     letterSpacing: 0.5,
   },
-
-  /* Hint box */
   hintBox: {
     marginTop: 24,
     padding: 14,

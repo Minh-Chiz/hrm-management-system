@@ -11,9 +11,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, Redirect } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { useData } from '@/context/DataContext';
+import { useTasksQuery } from '@/hooks/queries/useTaskQueries';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
 
 function getTaskStyle(type: string) {
   switch (type) {
@@ -49,8 +50,9 @@ function getStageBadge(stage?: string) {
 export default function AdminTasksScreen({ hideBackButton = false }: { hideBackButton?: boolean } = {}) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const { tasks } = useData();
+  const { data: tasks = [] } = useTasksQuery();
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
+
 
   // Route Guard: only admin can access this screen
   if (isLoading) {

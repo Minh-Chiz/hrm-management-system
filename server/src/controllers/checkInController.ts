@@ -4,13 +4,89 @@ import { AppError, asyncHandler } from '../middlewares/errorHandler';
 import { sendSuccess } from '../utils/response';
 import { CheckInDTO, GetCheckInHistoryQueryDTO } from '../types/dtos';
 
-const getTodayStr = (): string => new Date().toISOString().split('T')[0];
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000; // UTC+7 cố định, không phụ thuộc server timezone
+
+const getVietnamNow = (): Date => {
+  const utcMs = Date.now();
+  return new Date(utcMs + VN_OFFSET_MS);
+};
+
+const getTodayStr = (): string => {
+  const vnNow = getVietnamNow();
+  const y = vnNow.getUTCFullYear();
+  const m = String(vnNow.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(vnNow.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 
 const getCurrentTime = (): string => {
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
+  const vnNow = getVietnamNow();
+  const hh = String(vnNow.getUTCHours()).padStart(2, '0');
+  const mm = String(vnNow.getUTCMinutes()).padStart(2, '0');
   return `${hh}:${mm}`;
+};
+
+const getVietnamHourDecimal = (): number => {
+  const vnNow = getVietnamNow();
+  return vnNow.getUTCHours() + vnNow.getUTCMinutes() / 60;
+};
+
+const formatMins = (mins: number): string => {
+  if (mins <= 0) return '0 phút';
+  const hrs = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (hrs === 0) return `${m} phút`;
+  if (m === 0) return `${hrs} giờ`;
+  return `${hrs} giờ ${m} phút`;
+};
+
+const evaluateStatusOnServer = (shiftName: string, type: string, timeStr: string) => {
+  const shifts: Record<string, { start: number; end: number; grace: number }> = {
+    'Ca Sáng': { start: 8 * 60, end: 12 * 60, grace: 5 },
+    'Ca Chiều': { start: 13 * 60 + 30, end: 17 * 60 + 30, grace: 5 },
+    'Ca Tối': { start: 18 * 60, end: 22 * 60, grace: 5 },
+  };
+
+  const config = shifts[shiftName] || shifts['Ca Sáng'];
+  const parts = timeStr.split(':');
+  const hh = parseInt(parts[0], 10) || 0;
+  const mm = parseInt(parts[1], 10) || 0;
+  const timeMins = hh * 60 + mm;
+
+  if (type === 'in') {
+    const maxAllowed = config.start + config.grace;
+    if (timeMins > maxAllowed) {
+      const lateMinutes = timeMins - config.start;
+      return {
+        status: 'LATE',
+        lateMinutes,
+        earlyMinutes: 0,
+        note: `Điểm danh muộn ${formatMins(lateMinutes)}`,
+      };
+    }
+    return {
+      status: 'ON_TIME',
+      lateMinutes: 0,
+      earlyMinutes: 0,
+      note: `Điểm danh đúng giờ.`,
+    };
+  } else {
+    if (timeMins < config.end) {
+      const earlyMinutes = config.end - timeMins;
+      return {
+        status: 'EARLY_LEAVE',
+        lateMinutes: 0,
+        earlyMinutes,
+        note: `Check-out sớm ${formatMins(earlyMinutes)}`,
+      };
+    }
+    return {
+      status: 'NORMAL',
+      lateMinutes: 0,
+      earlyMinutes: 0,
+      note: `Check-out hoàn thành ca.`,
+    };
+  }
 };
 
 // POST /api/checkin
@@ -41,8 +117,7 @@ export const checkIn = asyncHandler(
     } else {
       type = 'in';
       // 2. Xác định ca mới dựa trên khung giờ cố định của công ty
-      const now = new Date();
-      const hour = now.getHours() + now.getMinutes() / 60;
+      const hour = getVietnamHourDecimal();
       
       if (hour < 12.0) {
         shiftName = 'Ca Sáng';
@@ -61,6 +136,18 @@ export const checkIn = asyncHandler(
     }
 
     const time = req.body.time || getCurrentTime();
+    let status = req.body.status;
+    let lateMinutes = req.body.lateMinutes;
+    let earlyMinutes = req.body.earlyMinutes;
+    let note = req.body.note;
+
+    if (!status) {
+      const evalRes = evaluateStatusOnServer(shiftName, type, time);
+      status = evalRes.status;
+      lateMinutes = evalRes.lateMinutes;
+      earlyMinutes = evalRes.earlyMinutes;
+      note = evalRes.note;
+    }
 
     const record = await prisma.checkIn.create({
       data: {
@@ -70,7 +157,11 @@ export const checkIn = asyncHandler(
         time,
         date: todayStr,
         shiftName,
-      },
+        status,
+        lateMinutes,
+        earlyMinutes,
+        note,
+      } as any,
     });
 
     const msg =
@@ -130,17 +221,39 @@ export const getCheckInHistory = asyncHandler(
       take: Math.min(isNaN(takeLimit) ? 100 : takeLimit, 500),
     });
 
-    const groupedByDate = history.reduce(
+    const enrichedHistory = history.map((record) => {
+      const rec = record as any;
+      let status = rec.status;
+      let lateMinutes = rec.lateMinutes;
+      let earlyMinutes = rec.earlyMinutes;
+      let note = rec.note;
+      if (!status) {
+        const evalRes = evaluateStatusOnServer(rec.shiftName || 'Ca Sáng', rec.type, rec.time);
+        status = evalRes.status;
+        lateMinutes = evalRes.lateMinutes;
+        earlyMinutes = evalRes.earlyMinutes;
+        note = evalRes.note;
+      }
+      return {
+        ...record,
+        status,
+        lateMinutes,
+        earlyMinutes,
+        note,
+      };
+    });
+
+    const groupedByDate = enrichedHistory.reduce(
       (acc, record) => {
         const d = record.date;
         if (!acc[d]) acc[d] = [];
         acc[d].push(record);
         return acc;
       },
-      {} as Record<string, typeof history>
+      {} as Record<string, typeof enrichedHistory>
     );
 
-    sendSuccess(res, { history, groupedByDate });
+    sendSuccess(res, { history: enrichedHistory, groupedByDate });
   }
 );
 
@@ -155,8 +268,30 @@ export const getTodayStatus = asyncHandler(
       orderBy: { createdAt: 'asc' },
     });
 
-    const checkInRecord = records.find((r) => r.type === 'in');
-    const checkOutRecord = records.find((r) => r.type === 'out');
+    const enrichedRecords = records.map((record) => {
+      const rec = record as any;
+      let status = rec.status;
+      let lateMinutes = rec.lateMinutes;
+      let earlyMinutes = rec.earlyMinutes;
+      let note = rec.note;
+      if (!status) {
+        const evalRes = evaluateStatusOnServer(rec.shiftName || 'Ca Sáng', rec.type, rec.time);
+        status = evalRes.status;
+        lateMinutes = evalRes.lateMinutes;
+        earlyMinutes = evalRes.earlyMinutes;
+        note = evalRes.note;
+      }
+      return {
+        ...record,
+        status,
+        lateMinutes,
+        earlyMinutes,
+        note,
+      };
+    });
+
+    const checkInRecord = enrichedRecords.find((r) => r.type === 'in');
+    const checkOutRecord = enrichedRecords.find((r) => r.type === 'out');
 
     sendSuccess(res, {
       date: todayStr,
@@ -164,7 +299,7 @@ export const getTodayStatus = asyncHandler(
       hasCheckedOut: !!checkOutRecord,
       checkInTime: checkInRecord?.time || null,
       checkOutTime: checkOutRecord?.time || null,
-      records,
+      records: enrichedRecords,
     });
   }
 );

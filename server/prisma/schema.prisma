@@ -31,6 +31,7 @@ model User {
   assignedTasks  Task[]    @relation("AssigneeTasks")
   sentRequests   Request[] @relation("SenderRequests")
   checkIns       CheckIn[]
+  notifications  Notification[]
 
   @@map("users")
 }
@@ -99,6 +100,10 @@ model CheckIn {
   time      String   // HH:mm format
   date      String   // YYYY-MM-DD format
   shiftName String?  @default("Ca Sáng") // "Ca Sáng" | "Ca Chiều" | "Ca Tối"
+  status       String?  // "ON_TIME" | "LATE" | "EARLY_LEAVE" | "NORMAL"
+  lateMinutes  Int?
+  earlyMinutes Int?
+  note         String?
 
   createdAt DateTime @default(now())
 
@@ -107,3 +112,23 @@ model CheckIn {
 
   @@map("checkins")
 }
+
+// ─── Notification Model ───────────────────────────────────────────────────────
+model Notification {
+  id         Int      @id @default(autoincrement())
+  userId     Int?     // null = thông báo broadcast cho tất cả (tương đương userId 'all' bên FE)
+  title      String
+  message    String
+  type       String   // "request_approved" | "request_rejected" | "task_assigned" | "system"
+  icon       String   // "check-circle" | "cancel" | "assignment" | "warning" | "campaign"
+  iconColor  String
+  read       Boolean  @default(false)
+  requestId  Int?
+
+  createdAt  DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+

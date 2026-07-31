@@ -97,6 +97,29 @@ export interface UpdateTaskDTO {
   budget?: string;
 }
 
+export interface CreateMasterProjectDTO {
+  title?: string;
+  deadline?: string;
+  budget?: string;
+}
+
+export interface HandoverTaskStageDTO {
+  toStage?: string;
+  approvedBy?: string;
+  nextAssigneeId?: number | string;
+}
+
+export interface AdvanceMasterPipelineStageDTO {
+  currentStage?: string;
+  approvedBy?: string;
+  customTitle?: string;
+}
+
+export interface UpdateTaskProgressDTO {
+  progress?: number;
+}
+
+
 // Request DTOs
 export interface GetRequestsQueryDTO {
   status?: string;
@@ -120,6 +143,10 @@ export interface UpdateRequestStatusDTO {
 export interface CheckInDTO {
   time?: string;
   shiftName?: string;
+  status?: string;
+  lateMinutes?: number;
+  earlyMinutes?: number;
+  note?: string;
 }
 
 export interface GetCheckInHistoryQueryDTO {
@@ -129,3 +156,15 @@ export interface GetCheckInHistoryQueryDTO {
   endDate?: string;
   limit?: string;
 }
+
+// Notification DTOs
+export interface CreateNotificationDTO {
+  userId?: string;
+  title?: string;
+  message?: string;
+  type?: string;
+  icon?: string;
+  iconColor?: string;
+  requestId?: string;
+}
+

@@ -14,7 +14,9 @@ export function useRealTimeClock() {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+    hour12: false,
   });
+
 
   const dateStr = currentTime.toLocaleDateString('vi-VN', {
     weekday: 'long',

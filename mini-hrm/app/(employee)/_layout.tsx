@@ -14,7 +14,7 @@ export default function EmployeeLayout() {
     );
   }
 
-  if (!user) {
+  if (!user || user.role !== 'employee') {
     return (
       <View style={{ flex: 1, backgroundColor: '#0d1516' }}>
         <Redirect href="/" />

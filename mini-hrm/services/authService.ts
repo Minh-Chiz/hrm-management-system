@@ -62,19 +62,23 @@ const MOCK_ACCOUNTS: {
   },
 ];
 
-const mapBackendUserToAuthUser = (backendUser: any): AuthUser => ({
-  id: String(backendUser.id),
-  username: backendUser.email,
-  name: backendUser.name,
-  role: backendUser.role,
-  position: backendUser.specialization || backendUser.role,
-  companyCode: 'VP',
-  specialization: backendUser.specialization || '',
-  email: backendUser.email,
-  phone: backendUser.phone || '',
-  team: backendUser.team || '',
-  avatar: backendUser.avatar || undefined,
-});
+const mapBackendUserToAuthUser = (backendUser: any): AuthUser => {
+  // Extract companyCode from email domain (e.g. "admin@vp.com" → "VP")
+  const emailDomain = backendUser.email?.split('@')[1]?.split('.')[0]?.toUpperCase() || 'VP';
+  return {
+    id: String(backendUser.id),
+    username: backendUser.email,
+    name: backendUser.name,
+    role: backendUser.role,
+    position: backendUser.specialization || backendUser.role,
+    companyCode: emailDomain,
+    specialization: backendUser.specialization || '',
+    email: backendUser.email,
+    phone: backendUser.phone || '',
+    team: backendUser.team || '',
+    avatar: backendUser.avatar || undefined,
+  };
+};
 
 export const authService = {
   /**
@@ -108,7 +112,11 @@ export const authService = {
         message: 'Đăng nhập thành công',
       };
     } else {
-      const email = payload.username.includes('@') ? payload.username.trim() : `${payload.username.trim()}@vp.com`;
+      // Nếu username đã là email đầy đủ thì dùng nguyên, ngược lại ghép với domain từ companyCode
+      const trimmedUsername = payload.username.trim();
+      const email = trimmedUsername.includes('@')
+        ? trimmedUsername
+        : `${trimmedUsername}@${payload.companyCode.trim().toLowerCase()}.com`;
       const res = await fetchWithAuth<{ token: string; user: any }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password: payload.password }),
