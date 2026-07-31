@@ -192,7 +192,7 @@ export function EditProfileModal({ visible, onClose }: EditProfileModalProps) {
           pointerEvents="box-none"
         >
           <View
-            style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}
+            style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}
           >
             {/* Drag Handle */}
             <View style={styles.dragHandle} />
@@ -227,7 +227,7 @@ export function EditProfileModal({ visible, onClose }: EditProfileModalProps) {
 
             <ScrollView
               showsVerticalScrollIndicator={true}
-              contentContainerStyle={[styles.formContent, { paddingBottom: Math.max(insets.bottom + 40, 50) }]}
+              contentContainerStyle={[styles.formContent, { paddingBottom: 16 }]}
               keyboardShouldPersistTaps="handled"
               nestedScrollEnabled={true}
               scrollEventThrottle={16}

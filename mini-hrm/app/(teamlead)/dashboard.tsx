@@ -7,7 +7,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '@/context/AuthContext';
 import { useTeamleadDashboard, TeamOverviewCard } from '@/features/teamlead';
 import { CheckInCard } from '@/features/employee/components/CheckInCard';
-import { NotificationModal, ProjectTabContent, CreateRequestModal } from '@/features/employee';
+import { NotificationModal, ProjectTabContent, CreateRequestModal, EarlyCheckOutModal } from '@/features/employee';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { useCreateRequestMutation } from '@/hooks/queries/useRequestQueries';
 import { REQUEST_TYPES } from '@/constants/requestTypes';
@@ -37,6 +37,12 @@ export default function TeamleadDashboard() {
     handleCheckInPress,
     handleApproveRequest,
     logout,
+    earlyCheckOutModalVisible,
+    setEarlyCheckOutModalVisible,
+    confirmEarlyCheckOut,
+    wifiSSID,
+    isCompanyWifi,
+    onToggleWifi,
   } = useTeamleadDashboard() as any;
 
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -150,6 +156,9 @@ export default function TeamleadDashboard() {
             <CheckInCard
               shiftInfo={shiftInfo}
               checkInsHistory={myCheckInHistory}
+              wifiSSID={wifiSSID}
+              isCompanyWifi={isCompanyWifi}
+              onToggleWifi={onToggleWifi}
               onCheckInPress={handleCheckInPress}
             />
 
@@ -347,6 +356,14 @@ export default function TeamleadDashboard() {
       </View>
 
       {/* Modals */}
+      <EarlyCheckOutModal
+        visible={earlyCheckOutModalVisible}
+        shiftName={shiftInfo.activeShiftName}
+        shiftEndTime={shiftInfo.shiftEndTime}
+        remainingText={shiftInfo.remainingText || ''}
+        onCancel={() => setEarlyCheckOutModalVisible(false)}
+        onConfirm={confirmEarlyCheckOut}
+      />
       <NotificationModal
         visible={notiModalVisible}
         onClose={() => setNotiModalVisible(false)}

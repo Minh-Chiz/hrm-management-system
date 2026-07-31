@@ -1,21 +1,31 @@
-import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, TextInput } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { REQUEST_TYPES } from '@/constants/requestTypes';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { REQUEST_TYPES, RequestTypeItem } from '@/constants/requestTypes';
 
 interface CreateRequestModalProps {
   visible: boolean;
   onClose: () => void;
-  selectedType: typeof REQUEST_TYPES[0];
-  onSelectType: (type: typeof REQUEST_TYPES[0]) => void;
-  applyDate: string;
-  onApplyDateChange: (date: string) => void;
-  reason: string;
-  onReasonChange: (reason: string) => void;
-  attachedFile: string | null;
-  onAttachFile: () => void;
-  onSubmit: () => void;
+  selectedType?: RequestTypeItem;
+  onSelectType?: (type: RequestTypeItem) => void;
+  applyDate?: string;
+  onApplyDateChange?: (date: string) => void;
+  reason?: string;
+  onReasonChange?: (reason: string) => void;
+  attachedFile?: string | null;
+  onAttachFile?: () => void;
+  onSubmit?: (data?: any) => void;
 }
 
 export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
@@ -33,102 +43,406 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
 
+  // Local fallback state if props are not controlled
+  const [localType, setLocalType] = useState<RequestTypeItem>(selectedType || REQUEST_TYPES[0]);
+  const [localDate, setLocalDate] = useState<string>(applyDate || '');
+  const [localReason, setLocalReason] = useState<string>(reason || '');
+
+  useEffect(() => {
+    if (selectedType) setLocalType(selectedType);
+  }, [selectedType]);
+
+  useEffect(() => {
+    if (applyDate !== undefined) setLocalDate(applyDate);
+  }, [applyDate]);
+
+  useEffect(() => {
+    if (reason !== undefined) setLocalReason(reason);
+  }, [reason]);
+
+  const currentType = selectedType || localType;
+  const currentDate = applyDate !== undefined ? applyDate : localDate;
+  const currentReason = reason !== undefined ? reason : localReason;
+
+  const handleSelectType = (typeItem: RequestTypeItem) => {
+    setLocalType(typeItem);
+    if (onSelectType) onSelectType(typeItem);
+  };
+
+  const handleDateChange = (val: string) => {
+    setLocalDate(val);
+    if (onApplyDateChange) onApplyDateChange(val);
+  };
+
+  const handleReasonChange = (val: string) => {
+    setLocalReason(val);
+    if (onReasonChange) onReasonChange(val);
+  };
+
+  const handleSubmit = () => {
+    if (onSubmit) {
+      onSubmit({
+        type: currentType,
+        date: currentDate,
+        reason: currentReason,
+        attachedFile,
+      });
+    }
+  };
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardView}>
-          <View style={[styles.modalSheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.overlay}
+      >
+        {/* Backdrop bấm ra ngoài để đóng */}
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+
+        {/* Modal Container dính sát đáy màn hình */}
+        <View
+          style={[
+            styles.sheetContainer,
+            { paddingBottom: Math.max(insets.bottom, 16) },
+          ]}
+        >
+          {/* Thanh gạt nhỏ ở đỉnh modal */}
+          <View style={styles.dragHandleWrap}>
             <View style={styles.dragHandle} />
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>Tạo đơn từ</Text>
-                <Text style={styles.modalSubtitle}>Điền thông tin và gửi đơn để quản lý duyệt</Text>
-              </View>
-              <TouchableOpacity style={styles.modalCloseBtn} onPress={onClose} activeOpacity={0.7}>
-                <MaterialIcons name="close" size={20} color="#849396" />
-              </TouchableOpacity>
+          </View>
+
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle}>Tạo đơn từ</Text>
+              <Text style={styles.headerSubtitle}>
+                Điền thông tin và gửi đơn để quản lý duyệt
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Content cuộn */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* 1. Loại đơn */}
+            <Text style={styles.label}>Loại đơn</Text>
+            <View style={styles.typeRow}>
+              {REQUEST_TYPES.map((t) => {
+                const isSel = currentType.id === t.id;
+                return (
+                  <TouchableOpacity
+                    key={t.id}
+                    onPress={() => handleSelectType(t)}
+                    activeOpacity={0.8}
+                    style={[styles.typeChip, isSel && styles.typeChipSelected]}
+                  >
+                    <MaterialIcons
+                      name={t.icon as any}
+                      size={16}
+                      color={isSel ? '#22D3EE' : '#9CA3AF'}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text
+                      style={[
+                        styles.typeChipText,
+                        isSel && styles.typeChipTextSelected,
+                      ]}
+                    >
+                      {t.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
-            <ScrollView contentContainerStyle={{ gap: 14, paddingBottom: Math.max(insets.bottom + 40, 50) }}>
-              <Text style={styles.formLabel}>Loại đơn</Text>
-              <View style={styles.typeRow}>
-                {REQUEST_TYPES.map((t) => {
-                  const isSel = selectedType.id === t.id;
-                  return (
-                    <TouchableOpacity key={t.id} style={[styles.typeChip, isSel && styles.typeChipSelected]} onPress={() => onSelectType(t)}>
-                      <MaterialIcons name={t.icon as any} size={14} color={isSel ? '#0d1516' : '#849396'} />
-                      <Text style={[styles.typeChipText, isSel && styles.typeChipTextSelected]}>{t.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+            {/* 2. Ngày áp dụng */}
+            <Text style={styles.label}>Ngày áp dụng</Text>
+            <View style={styles.inputBox}>
+              <Ionicons
+                name="calendar-outline"
+                size={18}
+                color="#6B7280"
+                style={{ marginRight: 8 }}
+              />
+              <TextInput
+                value={currentDate}
+                onChangeText={handleDateChange}
+                placeholder="VD: 19/07/2026 hoặc 19-20/07/2026"
+                placeholderTextColor="#4B5563"
+                style={styles.textInput}
+              />
+            </View>
 
-              <Text style={styles.formLabel}>Ngày áp dụng</Text>
-              <View style={styles.inputWrapper}>
-                <MaterialIcons name="event" size={16} color="#849396" style={{ marginRight: 8 }} />
-                <TextInput style={styles.textInput} placeholder="VD: 19/07/2026 hoặc 19-20/07/2026" placeholderTextColor="#3b494c" value={applyDate} onChangeText={onApplyDateChange} />
-              </View>
+            {/* 3. Lý do */}
+            <Text style={styles.label}>Lý do</Text>
+            <View style={styles.textAreaBox}>
+              <TextInput
+                value={currentReason}
+                onChangeText={handleReasonChange}
+                placeholder="Mô tả chi tiết lý do gửi đơn..."
+                placeholderTextColor="#4B5563"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                style={styles.textAreaInput}
+              />
+            </View>
 
-              <Text style={styles.formLabel}>Lý do</Text>
-              <TextInput style={styles.textArea} placeholder="Mô tả chi tiết lý do gửi đơn..." placeholderTextColor="#3b494c" value={reason} onChangeText={onReasonChange} multiline numberOfLines={4} textAlignVertical="top" />
+            {/* 4. Tệp đính kèm */}
+            <Text style={styles.label}>Tệp đính kèm (tuỳ chọn)</Text>
+            <TouchableOpacity
+              onPress={onAttachFile}
+              activeOpacity={0.8}
+              style={[
+                styles.uploadBox,
+                attachedFile ? styles.uploadBoxAttached : null,
+              ]}
+            >
+              {attachedFile ? (
+                <>
+                  <Ionicons name="checkmark-circle" size={22} color="#10B981" style={{ marginRight: 10 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.attachedFileName}>{attachedFile}</Text>
+                    <Text style={styles.uploadSub}>Nhấn để chọn tệp khác hoặc xoá</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="attach-outline" size={22} color="#06B6D4" style={{ marginRight: 10 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.uploadTitle}>Tải tệp minh chứng lên</Text>
+                    <Text style={styles.uploadSub}>PDF, PNG, JPG — tối đa 15MB</Text>
+                  </View>
+                </>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
 
-              <Text style={styles.formLabel}>Tệp đính kèm (tuỳ chọn)</Text>
-              <TouchableOpacity style={[styles.uploadZone, attachedFile ? styles.uploadZoneAttached : null]} onPress={onAttachFile}>
-                {attachedFile ? (
-                  <>
-                    <MaterialIcons name="check-circle" size={22} color="#05e777" />
-                    <View style={{ flex: 1, marginLeft: 8 }}>
-                      <Text style={styles.uploadAttachedName}>{attachedFile}</Text>
-                      <Text style={styles.uploadHint}>Nhấn để xoá tệp</Text>
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <MaterialIcons name="attach-file" size={22} color="#00daf3" />
-                    <View style={{ flex: 1, marginLeft: 8 }}>
-                      <Text style={styles.uploadTitle}>Tải tệp minh chứng lên</Text>
-                      <Text style={styles.uploadHint}>PDF, PNG, JPG — tối đa 15MB</Text>
-                    </View>
-                  </>
-                )}
-              </TouchableOpacity>
+          {/* 5. Cụm nút Action cố định ở đáy (Fix dứt điểm bị hở chân) */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              onPress={onClose}
+              activeOpacity={0.8}
+              style={styles.cancelBtn}
+            >
+              <Text style={styles.cancelBtnText}>Hủy</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity style={styles.submitBtn} onPress={onSubmit} activeOpacity={0.85}>
-                <MaterialIcons name="send" size={16} color="#003918" />
-                <Text style={styles.submitBtnText}>XÁC NHẬN GỬI</Text>
-              </TouchableOpacity>
-            </ScrollView>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              activeOpacity={0.85}
+              style={styles.submitBtn}
+            >
+              <Text style={styles.submitBtnText}>Gửi đơn từ</Text>
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  keyboardView: { width: '100%' },
-  modalSheet: { backgroundColor: '#151d1e', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, maxHeight: '85%' },
-  dragHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#3b494c', alignSelf: 'center', marginBottom: 12 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#dce4e5' },
-  modalSubtitle: { fontSize: 12, color: '#849396', marginTop: 2 },
-  modalCloseBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#192122', alignItems: 'center', justifyContent: 'center' },
-  formLabel: { fontSize: 12, fontWeight: '700', color: '#bac9cc', marginTop: 4 },
-  typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  typeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#192122', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(59,73,76,0.3)' },
-  typeChipSelected: { backgroundColor: '#00e5ff', borderColor: '#00e5ff' },
-  typeChipText: { fontSize: 12, color: '#849396' },
-  typeChipTextSelected: { color: '#0d1516', fontWeight: '700' },
-  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#192122', borderRadius: 10, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: 'rgba(59,73,76,0.3)' },
-  textInput: { flex: 1, color: '#dce4e5', fontSize: 13 },
-  textArea: { backgroundColor: '#192122', borderRadius: 10, padding: 12, height: 90, color: '#dce4e5', fontSize: 13, borderWidth: 1, borderColor: 'rgba(59,73,76,0.3)' },
-  uploadZone: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#192122', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: 'rgba(59,73,76,0.3)' },
-  uploadZoneAttached: { borderColor: '#05e777', backgroundColor: 'rgba(5,231,119,0.05)' },
-  uploadAttachedName: { fontSize: 12, color: '#05e777', fontWeight: '700' },
-  uploadTitle: { fontSize: 12, color: '#dce4e5', fontWeight: '600' },
-  uploadHint: { fontSize: 10, color: '#849396', marginTop: 2 },
-  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#05e777', height: 48, borderRadius: 12, marginTop: 10 },
-  submitBtnText: { fontSize: 14, fontWeight: '800', color: '#003918' },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'flex-end',
+  },
+  sheetContainer: {
+    backgroundColor: '#111827',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    maxHeight: '85%',
+    width: '100%',
+    borderTopWidth: 1,
+    borderColor: '#1F2937',
+  },
+  dragHandleWrap: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#4B5563',
+    borderRadius: 2,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  headerSubtitle: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(31, 41, 55, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingBottom: 16,
+  },
+  label: {
+    color: '#D1D5DB',
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  typeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#374151',
+    backgroundColor: 'rgba(31, 41, 55, 0.5)',
+  },
+  typeChipSelected: {
+    borderColor: '#22D3EE',
+    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+  },
+  typeChipText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+  },
+  typeChipTextSelected: {
+    color: '#22D3EE',
+    fontWeight: '700',
+  },
+  inputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#030712',
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  textInput: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 14,
+    padding: 0,
+  },
+  textAreaBox: {
+    backgroundColor: '#030712',
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    minHeight: 90,
+  },
+  textAreaInput: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    padding: 0,
+  },
+  uploadBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#030712',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#374151',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+  },
+  uploadBoxAttached: {
+    borderColor: '#10B981',
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+  },
+  uploadTitle: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  attachedFileName: {
+    color: '#10B981',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  uploadSub: {
+    color: '#6B7280',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  actionRow: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderColor: 'rgba(31, 41, 55, 0.8)',
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#1F2937',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtnText: {
+    color: '#D1D5DB',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  submitBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#22D3EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitBtnText: {
+    color: '#030712',
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });

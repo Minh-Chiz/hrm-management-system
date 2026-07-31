@@ -8,9 +8,12 @@ import { useCheckInLogsQuery, useCheckInMutation } from '@/hooks/queries/useChec
 import { useShiftTimer } from '@/features/employee/hooks/useShiftTimer';
 import { useNotificationStore } from '@/store';
 import { Task, Employee, PendingRequest, AppNotification } from '@/types';
+import { formatMinutesToText } from '@/constants/shifts';
+import { useWifiCheck } from '@/hooks/useWifiCheck';
 
 export function useTeamleadDashboard() {
   const { user, logout } = useAuth();
+  const wifiCheck = useWifiCheck();
   const { data: tasks = [], isLoading: tasksLoading, refetch: refetchTasks } = useTasksQuery();
   const { data: employees = [], isLoading: usersLoading, refetch: refetchUsers } = useUsersQuery();
   const { data: requests = [], isLoading: requestsLoading, refetch: refetchRequests } = useRequestsQuery();
@@ -22,6 +25,7 @@ export function useTeamleadDashboard() {
 
   const { notifications, fetchNotifications, markNotificationAsRead, markAllNotificationsAsRead } = useNotificationStore();
   const [notiModalVisible, setNotiModalVisible] = useState(false);
+  const [earlyCheckOutModalVisible, setEarlyCheckOutModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'tasks' | 'team' | 'profile'>('dashboard');
 
   useEffect(() => {
@@ -75,44 +79,102 @@ export function useTeamleadDashboard() {
 
   const shiftInfo = useShiftTimer(myCheckInHistory);
 
+  const executeCheckInOrOut = useCallback(
+    async (isConfirmedEarly: boolean = false) => {
+      const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const date = new Date().toISOString().split('T')[0];
+      const type = shiftInfo.checkedIn ? 'out' : 'in';
+
+      let status: 'ON_TIME' | 'LATE' | 'EARLY_LEAVE' | 'NORMAL' = 'NORMAL';
+      let lateMinutes: number | undefined;
+      let earlyMinutes: number | undefined;
+
+      if (type === 'in') {
+        if (shiftInfo.isLateCheckIn) {
+          status = 'LATE';
+          lateMinutes = shiftInfo.lateMinutes;
+        } else {
+          status = 'ON_TIME';
+        }
+      } else if (type === 'out') {
+        if (isConfirmedEarly || shiftInfo.isEarlyCheckOut) {
+          status = 'EARLY_LEAVE';
+          earlyMinutes = shiftInfo.remainingMinutes;
+        }
+      }
+
+      await checkInMutation.mutateAsync({
+        userId: String(currentUserId || 'guest'),
+        userName: user?.name || activeEmp?.name || 'Guest',
+        type,
+        time,
+        date,
+        shiftName: shiftInfo.activeShiftName,
+        status,
+        lateMinutes,
+        earlyMinutes,
+        wifiSSID: wifiCheck.wifiSSID,
+        isCompanyWifi: wifiCheck.isCompanyWifi,
+      });
+
+      if (type === 'in' && status === 'LATE') {
+        Alert.alert(
+          '⚠️ Điểm danh muộn',
+          `Bạn đã Check-in lúc ${time} - Trễ ${formatMinutesToText(lateMinutes || 0)} cho ca [${shiftInfo.activeShiftName}].`,
+          [{ text: 'Đã rõ' }]
+        );
+      } else if (type === 'out' && status === 'EARLY_LEAVE') {
+        Alert.alert(
+          '⚠️ Ghi nhận Về sớm',
+          `Bạn đã Check-out lúc ${time} - Sớm ${formatMinutesToText(earlyMinutes || 0)} so với giờ kết thúc ca [${shiftInfo.activeShiftName}].`,
+          [{ text: 'Đã rõ' }]
+        );
+      } else if (type === 'in') {
+        Alert.alert(
+          '✅ Check-in thành công',
+          `Bạn đã check-in thành công lúc ${time} cho ca [${shiftInfo.activeShiftName}].`,
+          [{ text: 'Đã rõ' }]
+        );
+      } else {
+        Alert.alert(
+          '✅ Check-out thành công',
+          `Bạn đã hoàn thành ca [${shiftInfo.activeShiftName}] lúc ${time}.`,
+          [{ text: 'Đã rõ' }]
+        );
+      }
+    },
+    [shiftInfo, checkInMutation, currentUserId, user?.name, activeEmp?.name, wifiCheck]
+  );
+
   const handleCheckInPress = useCallback(async () => {
+    // Strict Company Wifi Check Enforcement
+    if (!wifiCheck.isCompanyWifi) {
+      Alert.alert(
+        '🚫 Điểm danh bị khóa',
+        `Thiết bị đang kết nối mạng "${wifiCheck.wifiSSID}". Yêu cầu kết nối đúng Wifi công ty (${wifiCheck.allowedWifis.join(', ')}) để được phép điểm danh!`,
+        [{ text: 'Đã rõ' }]
+      );
+      return;
+    }
+
     if (shiftInfo.isCompletedToday) {
       Alert.alert('Đã hoàn thành', 'Bạn đã hoàn thành điểm danh tất cả các ca hôm nay rồi!', [{ text: 'Đã rõ' }]);
       return;
     }
-    const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    const date = new Date().toISOString().split('T')[0];
-    const type = shiftInfo.checkedIn ? 'out' : 'in';
-    let status: 'ON_TIME' | 'LATE' | 'EARLY_LEAVE' | 'NORMAL' = 'NORMAL';
-    let lateMinutes: number | undefined;
-    let earlyMinutes: number | undefined;
 
-    if (type === 'in') {
-      if (shiftInfo.isLateCheckIn) {
-        status = 'LATE';
-        lateMinutes = shiftInfo.lateMinutes;
-      } else {
-        status = 'ON_TIME';
-      }
-    } else {
-      if (shiftInfo.isEarlyCheckOut) {
-        status = 'EARLY_LEAVE';
-        earlyMinutes = shiftInfo.remainingMinutes;
-      }
+    // If currently checkedIn and attempting Check-Out early
+    if (shiftInfo.checkedIn && shiftInfo.isEarlyCheckOut) {
+      setEarlyCheckOutModalVisible(true);
+      return;
     }
 
-    await checkInMutation.mutateAsync({
-      userId: String(currentUserId || 'guest'),
-      userName: user?.name || activeEmp?.name || 'Guest',
-      type,
-      time,
-      date,
-      shiftName: shiftInfo.activeShiftName,
-      status,
-      lateMinutes,
-      earlyMinutes,
-    });
-  }, [shiftInfo, checkInMutation, currentUserId, user?.name, activeEmp?.name]);
+    await executeCheckInOrOut(false);
+  }, [wifiCheck, shiftInfo, executeCheckInOrOut]);
+
+  const confirmEarlyCheckOut = useCallback(async () => {
+    setEarlyCheckOutModalVisible(false);
+    await executeCheckInOrOut(true);
+  }, [executeCheckInOrOut]);
 
   const onlineMembers = useMemo(() => {
     return employees.filter((e) => e.status === 'Active');
@@ -174,6 +236,12 @@ export function useTeamleadDashboard() {
     setActiveTab,
     notiModalVisible,
     setNotiModalVisible,
+    earlyCheckOutModalVisible,
+    setEarlyCheckOutModalVisible,
+    confirmEarlyCheckOut,
+    wifiSSID: wifiCheck.wifiSSID,
+    isCompanyWifi: wifiCheck.isCompanyWifi,
+    onToggleWifi: wifiCheck.toggleWifiSimulation,
     myNotifications,
     unreadNotiCount,
     handleMarkNotificationAsRead,
