@@ -2,19 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { PendingRequest } from '@/types';
+import { getInitials, mapStatusEnum } from '@/utils';
 
 interface PendingApprovalsListProps {
   item: PendingRequest;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(' ');
-  if (parts.length >= 2) {
-    return (parts[parts.length - 2][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
 }
 
 function getAvatarColor(id: string): string {
@@ -27,12 +20,7 @@ function getAvatarColor(id: string): string {
 export function PendingApprovalsList({ item, onApprove, onReject }: PendingApprovalsListProps) {
   const avatarColor = getAvatarColor(item.id);
   const isPending = item.status === 'pending';
-
-  const statusConfig = {
-    pending: { label: 'Chờ duyệt', bg: 'rgba(233,196,0,0.15)', text: '#e9c400' },
-    approved: { label: 'Đã duyệt', bg: 'rgba(5,231,119,0.15)', text: '#05e777' },
-    rejected: { label: 'Đã từ chối', bg: 'rgba(255,180,171,0.15)', text: '#ffb4ab' },
-  }[item.status];
+  const statusConfig = mapStatusEnum(item.status);
 
   const typeIconName =
     item.type === 'Nghỉ phép'
@@ -59,7 +47,7 @@ export function PendingApprovalsList({ item, onApprove, onReject }: PendingAppro
         </View>
 
         <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-          <Text style={[styles.statusBadgeText, { color: statusConfig.text }]}>{statusConfig.label}</Text>
+          <Text style={[styles.statusBadgeText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
         </View>
       </View>
 

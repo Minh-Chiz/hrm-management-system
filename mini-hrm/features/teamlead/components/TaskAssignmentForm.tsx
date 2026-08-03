@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createTaskSchema, CreateTaskFormData } from '@/schemas/taskSchema';
 import { useAssignTaskMutation } from '@/hooks/queries/useTaskQueries';
 import { useUsersQuery } from '@/hooks/queries/useUserQueries';
-import { Employee } from '@/types';
+import { ControlledInput } from '@/components/ui/ControlledInput';
 
 interface TaskAssignmentFormProps {
   onSuccess?: () => void;
@@ -20,7 +20,6 @@ export function TaskAssignmentForm({ onSuccess }: TaskAssignmentFormProps) {
   const {
     control,
     handleSubmit,
-    setValue,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<CreateTaskFormData>({
@@ -35,7 +34,6 @@ export function TaskAssignmentForm({ onSuccess }: TaskAssignmentFormProps) {
   });
 
   const onSubmit = (data: CreateTaskFormData) => {
-    const assigneeObj = employees.find((e) => e.id === data.assigneeId) || employees[0];
     const payload = {
       title: data.title,
       assigneeId: data.assigneeId,
@@ -44,7 +42,6 @@ export function TaskAssignmentForm({ onSuccess }: TaskAssignmentFormProps) {
       pipelineStage: data.pipelineStage || 'development',
       budget: data.budget ? `${data.budget} VNĐ` : undefined,
     };
-
 
     assignTaskMutation.mutate(
       { payload, employees },
@@ -70,17 +67,13 @@ export function TaskAssignmentForm({ onSuccess }: TaskAssignmentFormProps) {
 
   return (
     <ScrollView style={styles.formContainer} keyboardShouldPersistTaps="handled">
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>TÊN CÔNG VIỆC *</Text>
-        <Controller
-          control={control}
-          name="title"
-          render={({ field: { onChange, value } }) => (
-            <TextInput style={styles.input} placeholder="Ví dụ: Thiết kế Banner release v2.0" placeholderTextColor="#3b494c" value={value} onChangeText={onChange} />
-          )}
-        />
-        {errors.title && <Text style={styles.errorText}>{errors.title.message}</Text>}
-      </View>
+      <ControlledInput
+        name="title"
+        control={control}
+        label="TÊN CÔNG VIỆC *"
+        placeholder="Ví dụ: Thiết kế Banner release v2.0"
+        icon="assignment"
+      />
 
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>NGƯỜI THỰC HIỆN *</Text>
@@ -100,19 +93,25 @@ export function TaskAssignmentForm({ onSuccess }: TaskAssignmentFormProps) {
             </ScrollView>
           )}
         />
+        {errors.assigneeId && <Text style={styles.errorText}>{errors.assigneeId.message}</Text>}
       </View>
 
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>HẠN HOÀN THÀNH *</Text>
-        <Controller
-          control={control}
-          name="deadline"
-          render={({ field: { onChange, value } }) => (
-            <TextInput style={styles.input} placeholder="Ví dụ: Hôm nay, 18/07/2026" placeholderTextColor="#3b494c" value={value} onChangeText={onChange} />
-          )}
-        />
-        {errors.deadline && <Text style={styles.errorText}>{errors.deadline.message}</Text>}
-      </View>
+      <ControlledInput
+        name="deadline"
+        control={control}
+        label="HẠN HOÀN THÀNH *"
+        placeholder="Ví dụ: Hôm nay, 18/07/2026"
+        icon="event"
+      />
+
+      <ControlledInput
+        name="budget"
+        control={control}
+        label="NGÂN SÁCH (TÙY CHỌN)"
+        placeholder="Ví dụ: 5.000.000"
+        icon="attach-money"
+        keyboardType="numeric"
+      />
 
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>GIAI ĐOẠN (PIPELINE STAGE)</Text>

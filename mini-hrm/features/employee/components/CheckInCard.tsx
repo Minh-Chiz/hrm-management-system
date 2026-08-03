@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { CheckInCardProps } from '../types/dashboard';
 import { formatMinutesToText, formatMinutesCompact, evaluateCheckInStatus, evaluateCheckOutStatus } from '@/constants/shifts';
+import { formatDateCompact } from '@/utils';
 
 export const CheckInCard: React.FC<CheckInCardProps> = ({
   shiftInfo,
@@ -195,13 +196,6 @@ export const CheckInCard: React.FC<CheckInCardProps> = ({
                     earlyMinutes = evalRes.earlyMinutes;
                   }
                 }
-
-                const formatDateCompact = (d?: string) => {
-                  if (!d) return '';
-                  const parts = d.split('-');
-                  if (parts.length === 3) return `${parts[2]}/${parts[1]}`;
-                  return d;
-                };
 
                 return (
                   <View key={item.id} style={styles.historyCardItem}>

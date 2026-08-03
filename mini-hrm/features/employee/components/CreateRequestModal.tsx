@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   Modal,
   View,
   Text,
   TouchableOpacity,
-  TextInput,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -12,7 +11,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createRequestSchema, CreateRequestFormData } from '@/schemas/requestSchema';
 import { REQUEST_TYPES, RequestTypeItem } from '@/constants/requestTypes';
+import { ControlledInput } from '@/components/ui/ControlledInput';
 
 interface CreateRequestModalProps {
   visible: boolean;
@@ -43,51 +46,52 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
 
-  // Local fallback state if props are not controlled
-  const [localType, setLocalType] = useState<RequestTypeItem>(selectedType || REQUEST_TYPES[0]);
-  const [localDate, setLocalDate] = useState<string>(applyDate || '');
-  const [localReason, setLocalReason] = useState<string>(reason || '');
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<CreateRequestFormData>({
+    resolver: zodResolver(createRequestSchema),
+    defaultValues: {
+      type: (selectedType?.label as any) || 'Nghỉ phép',
+      date: applyDate || '',
+      reason: reason || '',
+      description: reason || 'Gửi đơn xin phê duyệt',
+      hasAttachment: Boolean(attachedFile),
+      attachmentName: attachedFile || undefined,
+    },
+  });
 
   useEffect(() => {
-    if (selectedType) setLocalType(selectedType);
-  }, [selectedType]);
-
-  useEffect(() => {
-    if (applyDate !== undefined) setLocalDate(applyDate);
-  }, [applyDate]);
-
-  useEffect(() => {
-    if (reason !== undefined) setLocalReason(reason);
-  }, [reason]);
-
-  const currentType = selectedType || localType;
-  const currentDate = applyDate !== undefined ? applyDate : localDate;
-  const currentReason = reason !== undefined ? reason : localReason;
-
-  const handleSelectType = (typeItem: RequestTypeItem) => {
-    setLocalType(typeItem);
-    if (onSelectType) onSelectType(typeItem);
-  };
-
-  const handleDateChange = (val: string) => {
-    setLocalDate(val);
-    if (onApplyDateChange) onApplyDateChange(val);
-  };
-
-  const handleReasonChange = (val: string) => {
-    setLocalReason(val);
-    if (onReasonChange) onReasonChange(val);
-  };
-
-  const handleSubmit = () => {
-    if (onSubmit) {
-      onSubmit({
-        type: currentType,
-        date: currentDate,
-        reason: currentReason,
-        attachedFile,
+    if (visible) {
+      reset({
+        type: (selectedType?.label as any) || 'Nghỉ phép',
+        date: applyDate || '',
+        reason: reason || '',
+        description: reason || 'Gửi đơn xin phê duyệt',
+        hasAttachment: Boolean(attachedFile),
+        attachmentName: attachedFile || undefined,
       });
     }
+  }, [visible, selectedType, applyDate, reason, attachedFile, reset]);
+
+  const onValidSubmit = (data: CreateRequestFormData) => {
+    const selectedTypeObj =
+      REQUEST_TYPES.find((t) => t.label === data.type) || REQUEST_TYPES[0];
+
+    if (onSelectType) onSelectType(selectedTypeObj);
+    if (onApplyDateChange) onApplyDateChange(data.date);
+    if (onReasonChange) onReasonChange(data.reason);
+
+    if (onSubmit) {
+      onSubmit({
+        ...data,
+        type: selectedTypeObj,
+        attachedFile: attachedFile || data.attachmentName,
+      });
+    }
+    onClose();
   };
 
   return (
@@ -101,26 +105,22 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.overlay}
       >
-        {/* Backdrop bấm ra ngoài để đóng */}
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
           onPress={onClose}
         />
 
-        {/* Modal Container dính sát đáy màn hình */}
         <View
           style={[
             styles.sheetContainer,
             { paddingBottom: Math.max(insets.bottom, 16) },
           ]}
         >
-          {/* Thanh gạt nhỏ ở đỉnh modal */}
           <View style={styles.dragHandleWrap}>
             <View style={styles.dragHandle} />
           </View>
 
-          {/* Header */}
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitle}>Tạo đơn từ</Text>
@@ -137,77 +137,80 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Content cuộn */}
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
           >
             {/* 1. Loại đơn */}
-            <Text style={styles.label}>Loại đơn</Text>
-            <View style={styles.typeRow}>
-              {REQUEST_TYPES.map((t) => {
-                const isSel = currentType.id === t.id;
-                return (
-                  <TouchableOpacity
-                    key={t.id}
-                    onPress={() => handleSelectType(t)}
-                    activeOpacity={0.8}
-                    style={[styles.typeChip, isSel && styles.typeChipSelected]}
-                  >
-                    <MaterialIcons
-                      name={t.icon as any}
-                      size={16}
-                      color={isSel ? '#22D3EE' : '#9CA3AF'}
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text
-                      style={[
-                        styles.typeChipText,
-                        isSel && styles.typeChipTextSelected,
-                      ]}
-                    >
-                      {t.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <Text style={styles.label}>Loại đơn *</Text>
+            <Controller
+              control={control}
+              name="type"
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.typeRow}>
+                  {REQUEST_TYPES.map((t) => {
+                    const isSel = value === t.label;
+                    return (
+                      <TouchableOpacity
+                        key={t.id}
+                        onPress={() => {
+                          onChange(t.label as any);
+                          if (onSelectType) onSelectType(t);
+                        }}
+                        activeOpacity={0.8}
+                        style={[styles.typeChip, isSel && styles.typeChipSelected]}
+                      >
+                        <MaterialIcons
+                          name={t.icon as any}
+                          size={16}
+                          color={isSel ? '#22D3EE' : '#9CA3AF'}
+                          style={{ marginRight: 6 }}
+                        />
+                        <Text
+                          style={[
+                            styles.typeChipText,
+                            isSel && styles.typeChipTextSelected,
+                          ]}
+                        >
+                          {t.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            />
+            {errors.type && <Text style={styles.errorText}>{errors.type.message}</Text>}
 
             {/* 2. Ngày áp dụng */}
-            <Text style={styles.label}>Ngày áp dụng</Text>
-            <View style={styles.inputBox}>
-              <Ionicons
-                name="calendar-outline"
-                size={18}
-                color="#6B7280"
-                style={{ marginRight: 8 }}
-              />
-              <TextInput
-                value={currentDate}
-                onChangeText={handleDateChange}
-                placeholder="VD: 19/07/2026 hoặc 19-20/07/2026"
-                placeholderTextColor="#4B5563"
-                style={styles.textInput}
-              />
-            </View>
+            <ControlledInput
+              name="date"
+              control={control}
+              label="NGÀY ÁP DỤNG *"
+              placeholder="VD: 19/07/2026 hoặc 19-20/07/2026"
+              icon="event"
+            />
 
-            {/* 3. Lý do */}
-            <Text style={styles.label}>Lý do</Text>
-            <View style={styles.textAreaBox}>
-              <TextInput
-                value={currentReason}
-                onChangeText={handleReasonChange}
-                placeholder="Mô tả chi tiết lý do gửi đơn..."
-                placeholderTextColor="#4B5563"
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                style={styles.textAreaInput}
-              />
-            </View>
+            {/* 3. Mô tả */}
+            <ControlledInput
+              name="description"
+              control={control}
+              label="MÔ TẢ NGẮN *"
+              placeholder="Nhập tiêu đề hoặc mô tả đơn từ..."
+              icon="description"
+            />
 
-            {/* 4. Tệp đính kèm */}
+            {/* 4. Lý do */}
+            <ControlledInput
+              name="reason"
+              control={control}
+              label="LÝ DO CHI TIẾT *"
+              placeholder="Mô tả chi tiết lý do gửi đơn..."
+              icon="edit"
+            />
+
+            {/* 5. Tệp đính kèm */}
             <Text style={styles.label}>Tệp đính kèm (tuỳ chọn)</Text>
             <TouchableOpacity
               onPress={onAttachFile}
@@ -237,7 +240,6 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
             </TouchableOpacity>
           </ScrollView>
 
-          {/* 5. Cụm nút Action cố định ở đáy (Fix dứt điểm bị hở chân) */}
           <View style={styles.actionRow}>
             <TouchableOpacity
               onPress={onClose}
@@ -248,11 +250,14 @@ export const CreateRequestModal: React.FC<CreateRequestModalProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleSubmit}
+              onPress={handleSubmit(onValidSubmit)}
+              disabled={isSubmitting}
               activeOpacity={0.85}
               style={styles.submitBtn}
             >
-              <Text style={styles.submitBtnText}>Gửi đơn từ</Text>
+              <Text style={styles.submitBtnText}>
+                {isSubmitting ? 'Đang gửi...' : 'Gửi đơn từ'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -322,6 +327,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 4,
   },
+  errorText: {
+    color: '#ff4d4f',
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 12,
+    fontWeight: '500',
+  },
   typeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -350,37 +362,6 @@ const styles = StyleSheet.create({
     color: '#22D3EE',
     fontWeight: '700',
   },
-  inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#030712',
-    borderWidth: 1,
-    borderColor: '#1F2937',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
-  },
-  textInput: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: 14,
-    padding: 0,
-  },
-  textAreaBox: {
-    backgroundColor: '#030712',
-    borderWidth: 1,
-    borderColor: '#1F2937',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    minHeight: 90,
-  },
-  textAreaInput: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    padding: 0,
-  },
   uploadBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -390,6 +371,7 @@ const styles = StyleSheet.create({
     borderColor: '#374151',
     borderRadius: 12,
     padding: 14,
+    marginTop: 4,
     marginBottom: 8,
   },
   uploadBoxAttached: {

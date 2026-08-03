@@ -2,7 +2,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from './apiClient';
 import { ApiResponse } from '@/types';
 
-export { TOKEN_STORAGE_KEY, getAuthToken, setAuthToken, removeAuthToken } from './tokenUtils';
+export {
+  TOKEN_STORAGE_KEY,
+  REFRESH_TOKEN_STORAGE_KEY,
+  getAuthToken,
+  setAuthToken,
+  removeAuthToken,
+  getRefreshToken,
+  setRefreshToken,
+  removeRefreshToken,
+  clearTokens,
+} from './tokenUtils';
 
 /**
  * Helper to simulate network latency for Mock API calls

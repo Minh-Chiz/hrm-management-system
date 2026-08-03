@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Employee } from '@/types';
+import { getInitials, mapStatusEnum } from '@/utils';
 
 interface UserManagementTableProps {
   item: Employee;
@@ -19,7 +20,7 @@ function avatarColorFor(id: string) {
 
 export function UserManagementTable({ item, onEdit, onDelete }: UserManagementTableProps) {
   const aColor = avatarColorFor(item.id);
-  const isActive = item.status === 'Active';
+  const statusInfo = mapStatusEnum(item.status);
   const isLead = item.role === 'teamlead';
   const roleName = isLead ? 'Trưởng nhóm' : 'Nhân viên';
 
@@ -42,7 +43,7 @@ export function UserManagementTable({ item, onEdit, onDelete }: UserManagementTa
     >
       {/* Avatar */}
       <View style={[styles.avatarCircle, { backgroundColor: `${aColor}1A`, borderColor: aColor }]}>
-        <Text style={[styles.avatarText, { color: aColor }]}>{item.avatar || item.name.slice(0, 2).toUpperCase()}</Text>
+        <Text style={[styles.avatarText, { color: aColor }]}>{item.avatar || getInitials(item.name)}</Text>
       </View>
 
       {/* Info */}
@@ -78,10 +79,10 @@ export function UserManagementTable({ item, onEdit, onDelete }: UserManagementTa
 
       {/* Status & Actions */}
       <View style={styles.cardRight}>
-        <View style={[styles.statusBadge, isActive ? styles.statusBadgeActive : styles.statusBadgeInactive]}>
-          <View style={[styles.statusDot, { backgroundColor: isActive ? '#05e777' : '#849396' }]} />
-          <Text style={[styles.statusText, { color: isActive ? '#05e777' : '#849396' }]}>
-            {isActive ? 'Active' : 'Inactive'}
+        <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
+          <View style={[styles.statusDot, { backgroundColor: statusInfo.color }]} />
+          <Text style={[styles.statusText, { color: statusInfo.color }]}>
+            {statusInfo.label}
           </Text>
         </View>
 

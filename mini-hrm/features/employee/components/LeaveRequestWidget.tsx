@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LeaveRequestWidgetProps } from '../types/dashboard';
+import { mapStatusEnum } from '@/utils';
 
 export const LeaveRequestWidget: React.FC<LeaveRequestWidgetProps> = ({
   requests,
@@ -27,19 +28,7 @@ export const LeaveRequestWidget: React.FC<LeaveRequestWidgetProps> = ({
       ) : (
         <View style={styles.requestList}>
           {requests.slice(0, 4).map((req) => {
-            let statusColor = '#f5cd00';
-            let statusBg = 'rgba(245, 205, 0, 0.15)';
-            let statusText = 'Đang chờ duyệt';
-
-            if (req.status === 'approved') {
-              statusColor = '#05e777';
-              statusBg = 'rgba(5, 231, 119, 0.15)';
-              statusText = 'Đã duyệt';
-            } else if (req.status === 'rejected') {
-              statusColor = '#ffb4ab';
-              statusBg = 'rgba(255, 180, 171, 0.15)';
-              statusText = 'Từ chối';
-            }
+            const statusInfo = mapStatusEnum(req.status);
 
             const iconName = req.type.includes('OT')
               ? 'more-time'
@@ -61,8 +50,8 @@ export const LeaveRequestWidget: React.FC<LeaveRequestWidgetProps> = ({
                       </Text>
                     </View>
                   </View>
-                  <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
-                    <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
+                  <View style={[styles.statusPill, { backgroundColor: statusInfo.bg }]}>
+                    <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
                   </View>
                 </View>
                 <View style={styles.cardBottom}>
