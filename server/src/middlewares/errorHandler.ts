@@ -1,26 +1,11 @@
-import { Request, Response, NextFunction, RequestHandler } from 'express';
-import { ApiResponse } from '../utils/response';
+import { Request, Response, NextFunction } from 'express';
+import env from '../config/env';
+import AppError from '../utils/AppError';
+import catchAsync from '../utils/catchAsync';
+import { sendError } from '../utils/response';
 
-export class AppError extends Error {
-  public statusCode: number;
-  public isOperational: boolean;
-
-  constructor(message: string, statusCode: number = 400) {
-    super(message);
-    this.statusCode = statusCode;
-    this.isOperational = true;
-    Object.setPrototypeOf(this, new.target.prototype);
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
-
-export const asyncHandler = (
-  fn: (req: Request<any, any, any, any>, res: Response, next: NextFunction) => Promise<any>
-): RequestHandler => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-};
+export { AppError, catchAsync };
+export const asyncHandler = catchAsync;
 
 export const errorHandler = (
   err: any,
@@ -31,11 +16,18 @@ export const errorHandler = (
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Lỗi server không xác định. Vui lòng thử lại sau.';
 
-  const responsePayload: ApiResponse = {
-    success: false,
-    message,
-    ...(process.env.NODE_ENV !== 'production' && { error: err.stack || err.message }),
-  };
+  if (env.NODE_ENV === 'development') {
+    sendError(res, message, statusCode, err.stack || String(err));
+    return;
+  }
 
-  res.status(statusCode).json(responsePayload);
+  // Production Mode
+  if (err.isOperational) {
+    sendError(res, message, statusCode);
+    return;
+  }
+
+  // Non-operational / programming error: don't leak details to client
+  console.error('💥 ERROR:', err);
+  sendError(res, 'Lỗi server nội bộ. Vui lòng thử lại sau.', 500);
 };

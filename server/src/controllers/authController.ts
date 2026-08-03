@@ -1,13 +1,12 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import env from '../config/env';
 import { prisma } from '../lib/prisma';
-import { AppError, asyncHandler } from '../middlewares/errorHandler';
+import AppError from '../utils/AppError';
+import catchAsync from '../utils/catchAsync';
 import { sendSuccess } from '../utils/response';
 import { LoginDTO, UpdateProfileDTO } from '../types/dtos';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'mini-hrm-secret-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 const generateToken = (user: {
   id: number;
@@ -17,8 +16,8 @@ const generateToken = (user: {
 }): string => {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, name: user.name },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions
   );
 };
 
@@ -28,7 +27,7 @@ const sanitizeUser = (user: Record<string, any>) => {
 };
 
 // POST /api/auth/login
-export const login = asyncHandler(async (req: Request<{}, {}, LoginDTO>, res: Response): Promise<void> => {
+export const login = catchAsync(async (req: Request<{}, {}, LoginDTO>, res: Response): Promise<void> => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -67,7 +66,7 @@ export const login = asyncHandler(async (req: Request<{}, {}, LoginDTO>, res: Re
 });
 
 // GET /api/auth/me
-export const getMe = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+export const getMe = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const userId = req.user!.id;
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -79,7 +78,7 @@ export const getMe = asyncHandler(async (req: Request, res: Response): Promise<v
 });
 
 // PATCH /api/auth/profile
-export const updateProfile = asyncHandler(
+export const updateProfile = catchAsync(
   async (req: Request<{}, {}, UpdateProfileDTO>, res: Response): Promise<void> => {
     const userId = req.user!.id;
     const { phone, avatar, currentPassword, newPassword } = req.body;

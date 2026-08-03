@@ -1,8 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import env from './config/env';
 
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
@@ -10,22 +8,23 @@ import taskRoutes from './routes/taskRoutes';
 import requestRoutes from './routes/requestRoutes';
 import checkInRoutes from './routes/checkInRoutes';
 import notificationRoutes from './routes/notificationRoutes';
-import { errorHandler, AppError } from './middlewares/errorHandler';
+import { errorHandler } from './middlewares/errorHandler';
+import AppError from './utils/AppError';
 import { sendSuccess } from './utils/response';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = env.PORT;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || '*',
+    origin: env.CLIENT_URL,
     credentials: true,
   })
 );
 
-if (process.env.NODE_ENV !== 'production') {
+if (env.NODE_ENV !== 'production') {
   app.use((req: Request, _res: Response, next: NextFunction) => {
     const timestamp = new Date().toLocaleTimeString('vi-VN');
     console.log(`[${timestamp}] ${req.method} ${req.path}`);

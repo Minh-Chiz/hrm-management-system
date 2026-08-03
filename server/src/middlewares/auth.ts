@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { AppError } from './errorHandler';
+import env from '../config/env';
+import AppError from '../utils/AppError';
 
 interface JwtPayload {
   id: number;
@@ -21,10 +22,8 @@ export const authenticateToken = (
     throw new AppError('Không tìm thấy token xác thực. Vui lòng đăng nhập.', 401);
   }
 
-  const secret = process.env.JWT_SECRET || 'mini-hrm-secret-key';
-
   try {
-    const decoded = jwt.verify(token, secret) as JwtPayload;
+    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
     req.user = {
       id: decoded.id,
       email: decoded.email,

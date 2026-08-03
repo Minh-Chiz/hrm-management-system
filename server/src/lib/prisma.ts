@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import env from '../config/env';
 
 // ─── Singleton PrismaClient ───────────────────────────────────────────────────
 // Tránh tạo nhiều instance trong môi trường dev (hot-reload)
@@ -10,12 +11,12 @@ export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     log:
-      process.env.NODE_ENV === 'development'
+      env.NODE_ENV === 'development'
         ? ['query', 'error', 'warn']
         : ['error'],
   });
 
-if (process.env.NODE_ENV !== 'production') {
+if (env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
