@@ -52,15 +52,11 @@ const handleForceLogout = async (): Promise<void> => {
   }
 };
 
-// Request Interceptor: Automatically retrieve and attach Bearer Auth Token
+// Request Interceptor: Automatically retrieve and attach Bearer Auth Token directly from Zustand store
 apiClient.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     try {
-      // Retrieve access token from Zustand state first, fallback to AsyncStorage
-      let token = useAuthStore.getState().token;
-      if (!token) {
-        token = await getAuthToken();
-      }
+      const token = useAuthStore.getState().userToken || useAuthStore.getState().token;
 
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;

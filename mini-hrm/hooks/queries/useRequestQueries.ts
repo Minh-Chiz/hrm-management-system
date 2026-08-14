@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { requestService } from '@/services/requestService';
-import { CreateRequestPayload } from '@/types';
+import { notificationService } from '@/services/notificationService';
+import { CreateRequestPayload, CreateNotificationPayload, PendingRequest } from '@/types';
 
 export const REQUEST_QUERY_KEY = ['requests'] as const;
 
@@ -55,11 +56,44 @@ export function useUpdateRequestStatusMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: 'approved' | 'rejected' | 'pending' }) => {
+    mutationFn: async ({
+      id,
+      status,
+      onNotificationCreated,
+    }: {
+      id: string;
+      status: PendingRequest['status'];
+      onNotificationCreated?: (payload: CreateNotificationPayload) => Promise<void>;
+    }) => {
+      const requestsRes = await requestService.getRequests();
+      const targetReq = requestsRes.data?.find((r) => r.id === id);
+
       const res = await requestService.updateRequestStatus(id, status);
       if (!res.success) {
         throw new Error(res.message || 'Cập nhật trạng thái thất bại');
       }
+
+      if (targetReq && (status === 'approved' || status === 'rejected')) {
+        const isApproved = status === 'approved';
+        const notiPayload: CreateNotificationPayload = {
+          userId: targetReq.senderId,
+          title: isApproved ? 'Đơn được duyệt 🎉' : 'Đơn bị từ chối ❌',
+          message: isApproved
+            ? `Đơn xin ${targetReq.type} ngày ${targetReq.date} của bạn đã được duyệt.`
+            : `Đơn xin ${targetReq.type} ngày ${targetReq.date} của bạn đã bị từ chối.`,
+          type: isApproved ? 'request_approved' : 'request_rejected',
+          icon: isApproved ? 'check-circle' : 'cancel',
+          iconColor: isApproved ? '#05e777' : '#ffb4ab',
+          requestId: id,
+        };
+
+        if (onNotificationCreated) {
+          await onNotificationCreated(notiPayload);
+        } else {
+          await notificationService.addNotification(notiPayload);
+        }
+      }
+
       return res.data;
     },
     onSuccess: () => {
@@ -67,4 +101,5 @@ export function useUpdateRequestStatusMutation() {
     },
   });
 }
+
 

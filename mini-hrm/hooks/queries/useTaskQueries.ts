@@ -64,3 +64,152 @@ export function useUpdateTaskStatusMutation() {
     },
   });
 }
+
+export function useCreateMasterProjectMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      title,
+      deadline,
+      employees,
+      budget,
+      creatorId,
+      creatorName,
+    }: {
+      title: string;
+      deadline: string;
+      employees?: Employee[];
+      budget?: string;
+      creatorId?: string;
+      creatorName?: string;
+    }) => {
+      const res = await taskService.createMasterProject(title, deadline, employees, budget, creatorId, creatorName);
+      if (!res.success) {
+        throw new Error(res.message || 'Không thể tạo dự án tổng');
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEY });
+    },
+  });
+}
+
+export function useAdvanceMasterPipelineStageMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      masterTaskId,
+      currentStage,
+      approvedBy,
+      employees,
+      customTitle,
+    }: {
+      masterTaskId: string;
+      currentStage: Task['pipelineStage'];
+      approvedBy: string;
+      employees: Employee[];
+      customTitle?: string;
+    }) => {
+      const res = await taskService.advanceMasterPipelineStage(masterTaskId, currentStage, approvedBy, customTitle, employees);
+      if (!res.success) {
+        throw new Error(res.message || 'Không thể chuyển giai đoạn dự án');
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEY });
+    },
+  });
+}
+
+export function useHandoverTaskStageMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      toStage,
+      approvedBy,
+      employees,
+      nextAssigneeId,
+    }: {
+      id: string;
+      toStage: Task['pipelineStage'];
+      approvedBy: string;
+      employees: Employee[];
+      nextAssigneeId?: string;
+    }) => {
+      const res = await taskService.handoverTaskStage(id, toStage, approvedBy, nextAssigneeId, employees);
+      if (!res.success) {
+        throw new Error(res.message || 'Không thể bàn giao giai đoạn công việc');
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEY });
+    },
+  });
+}
+
+export function useUpdateTaskProgressMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, progress }: { id: string; progress: number }) => {
+      const res = await taskService.updateTaskProgress(id, progress);
+      if (!res.success) {
+        throw new Error(res.message || 'Không thể cập nhật tiến độ');
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEY });
+    },
+  });
+}
+
+export function useDeleteTaskMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await taskService.deleteTask(id);
+      if (!res.success) {
+        throw new Error(res.message || 'Không thể xóa công việc');
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEY });
+    },
+  });
+}
+
+export function useUpdateTaskMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      updatedFields,
+      employees,
+    }: {
+      id: string;
+      updatedFields: Partial<Task>;
+      employees: Employee[];
+    }) => {
+      const res = await taskService.updateTask(id, updatedFields, employees);
+      if (!res.success) {
+        throw new Error(res.message || 'Không thể cập nhật công việc');
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEY });
+    },
+  });
+}
+
