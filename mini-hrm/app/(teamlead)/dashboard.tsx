@@ -42,6 +42,8 @@ export default function TeamleadDashboard() {
     confirmEarlyCheckOut,
     wifiSSID,
     isCompanyWifi,
+    isDemoBypass,
+    onToggleDemoBypass,
     onToggleWifi,
   } = useTeamleadDashboard() as any;
 
@@ -158,6 +160,8 @@ export default function TeamleadDashboard() {
               checkInsHistory={myCheckInHistory}
               wifiSSID={wifiSSID}
               isCompanyWifi={isCompanyWifi}
+              isDemoBypass={isDemoBypass}
+              onToggleDemoBypass={onToggleDemoBypass}
               onToggleWifi={onToggleWifi}
               onCheckInPress={handleCheckInPress}
             />

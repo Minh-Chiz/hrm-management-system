@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { useAdminDashboard, AdminStatsWidget } from '@/features/admin';
+import { useAdminDashboard, AdminStatsWidget, CompanyAttendanceChartCard } from '@/features/admin';
 import ManageUsersScreen from './manage-users';
 import AdminTasksScreen from './tasks';
 import ApproveRequestsScreen from './approve-requests';
@@ -62,6 +62,9 @@ export default function AdminDashboard() {
               todayLeavesCount={stats.todayLeavesCount}
               onNavigateTab={(tab) => setActiveNav(tab)}
             />
+
+            {/* ── Biểu đồ Cột Chuyên Cần 5 Ngày Gần Nhất ── */}
+            <CompanyAttendanceChartCard />
 
             <View style={styles.activitySection}>
               <View style={styles.activityHeader}>

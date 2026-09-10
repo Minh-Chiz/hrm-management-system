@@ -50,6 +50,10 @@ export interface CheckInCardProps {
   isCompanyWifi?: boolean;
   onToggleWifi?: () => void;
   onCheckInPress: () => void;
+  isDemoBypass?: boolean;
+  onToggleDemoBypass?: () => void;
+  userName?: string;
+  userAvatar?: string;
 }
 
 

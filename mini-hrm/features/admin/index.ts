@@ -4,3 +4,4 @@ export * from './components/UserManagementTable';
 export * from './components/AddUserModal';
 export * from './components/EditUserModal';
 export * from './components/PendingApprovalsList';
+export * from './components/CompanyAttendanceChartCard';

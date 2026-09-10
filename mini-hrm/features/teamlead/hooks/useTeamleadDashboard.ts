@@ -241,6 +241,8 @@ export function useTeamleadDashboard() {
     confirmEarlyCheckOut,
     wifiSSID: wifiCheck.wifiSSID,
     isCompanyWifi: wifiCheck.isCompanyWifi,
+    isDemoBypass: wifiCheck.isDemoBypass,
+    onToggleDemoBypass: wifiCheck.toggleDemoBypass,
     onToggleWifi: wifiCheck.toggleWifiSimulation,
     myNotifications,
     unreadNotiCount,

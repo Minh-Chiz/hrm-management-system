@@ -19,12 +19,65 @@ import { ControlledInput } from '@/components/ui/ControlledInput';
 import { useAuth } from '@/context/AuthContext';
 import { loginSchema, LoginFormData } from '@/schemas/authSchema';
 
+interface DemoAccount {
+  id: 'admin' | 'teamlead' | 'employee';
+  badge: string;
+  roleName: string;
+  companyCode: string;
+  username: string;
+  password: string;
+  borderColor: string;
+  bgColor: string;
+  textColor: string;
+  subtitle: string;
+}
+
+const DEMO_ACCOUNTS: DemoAccount[] = [
+  {
+    id: 'admin',
+    badge: '👑 Admin (HR)',
+    roleName: 'Quản trị viên',
+    companyCode: 'VP',
+    username: 'admin',
+    password: 'admin123',
+    borderColor: 'rgba(245, 158, 11, 0.4)',
+    bgColor: 'rgba(245, 158, 11, 0.08)',
+    textColor: '#fbbf24',
+    subtitle: 'admin / admin123',
+  },
+  {
+    id: 'teamlead',
+    badge: '⚡ Team Lead',
+    roleName: 'Trưởng nhóm',
+    companyCode: 'VP',
+    username: 'leader',
+    password: 'leader123',
+    borderColor: 'rgba(0, 229, 255, 0.4)',
+    bgColor: 'rgba(0, 229, 255, 0.08)',
+    textColor: '#00e5ff',
+    subtitle: 'leader / leader123',
+  },
+  {
+    id: 'employee',
+    badge: '👤 Nhân viên',
+    roleName: 'Nhân viên',
+    companyCode: 'VP',
+    username: 'nhanvien',
+    password: 'user123',
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+    bgColor: 'rgba(16, 185, 129, 0.08)',
+    textColor: '#34d399',
+    subtitle: 'nhanvien / user123',
+  },
+];
+
 export default function LoginScreen() {
   const { login, isLoading, error, clearError } = useAuth();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedDemoRole, setSelectedDemoRole] = useState<string | null>(null);
 
-  const { control, handleSubmit } = useForm<LoginFormData>({
+  const { control, handleSubmit, setValue } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       companyCode: '',
@@ -51,6 +104,26 @@ export default function LoginScreen() {
   const handleTogglePassword = useCallback(() => {
     setShowPassword((prev) => !prev);
   }, []);
+
+  const handleQuickDemoLogin = useCallback(
+    async (account: DemoAccount) => {
+      if (isLoading) return;
+      setSelectedDemoRole(account.id);
+
+      // 1. Tự động điền dữ liệu vào form & validate
+      setValue('companyCode', account.companyCode, { shouldValidate: true });
+      setValue('username', account.username, { shouldValidate: true });
+      setValue('password', account.password, { shouldValidate: true });
+
+      // 2. Tự động gọi đăng nhập 1-click
+      try {
+        await login(account.companyCode, account.username, account.password);
+      } finally {
+        setSelectedDemoRole(null);
+      }
+    },
+    [isLoading, setValue, login]
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -147,7 +220,7 @@ export default function LoginScreen() {
               disabled={isLoading}
               activeOpacity={0.85}
             >
-              {isLoading ? (
+              {isLoading && !selectedDemoRole ? (
                 <ActivityIndicator size="small" color="#00363d" />
               ) : (
                 <>
@@ -157,20 +230,62 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
-            {/* Test credentials hint */}
-            <View style={styles.hintBox}>
-              <Text style={styles.hintTitle}>Tài khoản thử nghiệm (Mã: VP)</Text>
-              <Text style={styles.hintRow}>
-                <Text style={styles.hintLabel}>Admin: </Text>admin / admin123
-              </Text>
-              <Text style={styles.hintRow}>
-                <Text style={styles.hintLabel}>Team Lead: </Text>leader / leader123
-              </Text>
-              <Text style={styles.hintRow}>
-                <Text style={styles.hintLabel}>Nhân viên: </Text>nhanvien / user123
-              </Text>
-              <Text style={[styles.hintRow, { marginTop: 6, color: '#5a7275', fontSize: 11 }]}>
-                * Nhập phần trước @ của email (vd: admin)
+            {/* ── Quick Demo Login Section ── */}
+            <View className="mt-6 pt-5 border-t border-[#3b494c]/40" style={styles.demoSection}>
+              {/* Tiêu đề khu vực Demo */}
+              <View className="flex-row items-center justify-center mb-3">
+                <Text className="text-xs font-semibold tracking-wider text-[#00daf3] uppercase">
+                  — Tài khoản dùng thử (1-Click Demo) —
+                </Text>
+              </View>
+
+              {/* 3 Nút Demo (Badge / Thẻ nhỏ) nằm ngang */}
+              <View className="flex-row items-stretch gap-2" style={styles.demoRow}>
+                {DEMO_ACCOUNTS.map((acc) => {
+                  const isThisLoading = isLoading && selectedDemoRole === acc.id;
+                  return (
+                    <TouchableOpacity
+                      key={acc.id}
+                      className="flex-1 items-center justify-center py-2.5 px-1.5 rounded-xl border active:opacity-80"
+                      style={[
+                        styles.demoCard,
+                        {
+                          borderColor: acc.borderColor,
+                          backgroundColor: acc.bgColor,
+                        },
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={() => handleQuickDemoLogin(acc)}
+                      disabled={isLoading}
+                    >
+                      {isThisLoading ? (
+                        <ActivityIndicator size="small" color={acc.textColor} />
+                      ) : (
+                        <>
+                          <Text
+                            className="text-[12px] font-bold text-center"
+                            style={{ color: acc.textColor }}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                          >
+                            {acc.badge}
+                          </Text>
+                          <Text
+                            className="text-[10px] text-center mt-1 text-[#849396]"
+                            numberOfLines={1}
+                          >
+                            {acc.subtitle}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Ghi chú hướng dẫn */}
+              <Text className="text-[11px] text-center text-[#5a7275] mt-2.5" style={styles.demoHint}>
+                * Chạm 1-click để tự động điền &amp; đăng nhập ngay lập tức
               </Text>
             </View>
           </View>
@@ -285,29 +400,29 @@ const styles = StyleSheet.create({
     color: '#00363d',
     letterSpacing: 0.5,
   },
-  hintBox: {
+  demoSection: {
     marginTop: 24,
-    padding: 14,
-    backgroundColor: 'rgba(0, 229, 255, 0.05)',
-    borderRadius: 10,
+    paddingTop: 18,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(59, 73, 76, 0.45)',
+  },
+  demoRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  demoCard: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0, 229, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  hintTitle: {
+  demoHint: {
+    marginTop: 10,
     fontSize: 11,
-    fontWeight: '700',
-    color: '#00daf3',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  hintRow: {
-    fontSize: 12,
-    color: '#849396',
-    lineHeight: 18,
-  },
-  hintLabel: {
-    color: '#bac9cc',
-    fontWeight: '600',
+    color: '#5a7275',
+    textAlign: 'center',
   },
 });

@@ -517,6 +517,8 @@ export function useEmployeeDashboard() {
     // Wifi Check
     wifiSSID: wifiCheck.wifiSSID,
     isCompanyWifi: wifiCheck.isCompanyWifi,
+    isDemoBypass: wifiCheck.isDemoBypass,
+    onToggleDemoBypass: wifiCheck.toggleDemoBypass,
     onToggleWifi: wifiCheck.toggleWifiSimulation,
     // Modal controls
 

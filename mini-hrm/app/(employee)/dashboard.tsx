@@ -7,6 +7,7 @@ import {
   useEmployeeDashboard, ProfileHeader, CheckInCard, TaskSummaryWidget,
   LeaveRequestWidget, RecentActivityList, ProjectTabContent, ProfileTabContent,
   NotificationModal, CreateRequestModal, TaskDetailModal, AllTasksModal, EarlyCheckOutModal,
+  EmployeeWorkloadChartCard,
 } from '@/features/employee';
 
 
@@ -44,8 +45,17 @@ export default function EmployeeDashboard() {
               checkInsHistory={dash.myHistory}
               wifiSSID={dash.wifiSSID}
               isCompanyWifi={dash.isCompanyWifi}
+              isDemoBypass={dash.isDemoBypass}
+              onToggleDemoBypass={dash.onToggleDemoBypass}
               onToggleWifi={dash.onToggleWifi}
               onCheckInPress={dash.handleCheckInPress}
+            />
+
+            {/* ── Biểu đồ Donut Hiệu suất & Thống kê Nghỉ phép ── */}
+            <EmployeeWorkloadChartCard
+              stats={dash.taskStats}
+              usedLeaveDays={3}
+              totalLeaveDays={12}
             />
 
             <TaskSummaryWidget

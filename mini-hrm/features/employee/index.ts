@@ -18,4 +18,5 @@ export * from './components/CreateRequestModal';
 export * from './components/TaskDetailModal';
 export * from './components/AllTasksModal';
 export * from './components/EarlyCheckOutModal';
+export * from './components/EmployeeWorkloadChartCard';
 
