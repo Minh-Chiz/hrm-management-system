@@ -1,7 +1,13 @@
 import axios, { InternalAxiosRequestConfig, AxiosError, AxiosResponse } from 'axios';
 import { API_CONFIG } from '@/config/api';
 import { getAuthToken, getRefreshToken, setAuthToken, setRefreshToken, clearTokens } from './tokenUtils';
-import { useAuthStore } from '@/store/useAuthStore';
+
+/**
+ * Lazy getter để tránh circular dependency:
+ * apiClient -> useAuthStore -> authService -> apiUtils -> apiClient
+ * Dùng require() lúc runtime thay vì import tĩnh lúc load module.
+ */
+const getAuthStore = () => require('@/store/useAuthStore').useAuthStore;
 
 // Extended Axios internal request config to track retry status and prevent infinite loops
 export interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -46,7 +52,7 @@ const processQueue = (error: unknown, token: string | null = null) => {
 const handleForceLogout = async (): Promise<void> => {
   try {
     await clearTokens();
-    await useAuthStore.getState().logout();
+    await getAuthStore().getState().logout();
   } catch (e) {
     console.error('[apiClient] Error during force logout:', e);
   }
@@ -56,7 +62,8 @@ const handleForceLogout = async (): Promise<void> => {
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     try {
-      const token = useAuthStore.getState().userToken || useAuthStore.getState().token;
+      const store = getAuthStore();
+      const token = store.getState().userToken || store.getState().token;
 
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -121,7 +128,7 @@ apiClient.interceptors.response.use(
 
       try {
         // Retrieve current refresh token
-        let refreshToken = useAuthStore.getState().refreshToken;
+        let refreshToken = getAuthStore().getState().refreshToken;
         if (!refreshToken) {
           refreshToken = await getRefreshToken();
         }
@@ -159,7 +166,7 @@ apiClient.interceptors.response.use(
         if (newRefreshToken) {
           await setRefreshToken(newRefreshToken);
         }
-        useAuthStore.getState().setTokens(newAccessToken, newRefreshToken);
+        getAuthStore().getState().setTokens(newAccessToken, newRefreshToken);
 
         // Resume all queued requests with the new access token
         processQueue(null, newAccessToken);

@@ -1,7 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Employee } from '@/types';
+
+/** Trả về true nếu chuỗi là URL ảnh */
+const isUrl = (str?: string) => !!str && (str.startsWith('http://') || str.startsWith('https://'));
 
 interface TeamOverviewCardProps {
   onlineCount: number;
@@ -55,9 +58,17 @@ export function TeamOverviewCard({
         {members.slice(0, 5).map((m) => (
           <View key={m.id} style={styles.avatarWrap}>
             <View style={[styles.avatar, { backgroundColor: `${m.accentColor || '#00e5ff'}22`, borderColor: m.accentColor || '#00e5ff' }]}>
-              <Text style={[styles.avatarText, { color: m.accentColor || '#00e5ff' }]}>
-                {m.avatar || m.name.slice(0, 2).toUpperCase()}
-              </Text>
+              {isUrl(m.avatar) ? (
+                <Image
+                  source={{ uri: m.avatar }}
+                  style={styles.avatarImage}
+                  defaultSource={undefined}
+                />
+              ) : (
+                <Text style={[styles.avatarText, { color: m.accentColor || '#00e5ff' }]}>
+                  {m.avatar && !isUrl(m.avatar) ? m.avatar : m.name.slice(0, 2).toUpperCase()}
+                </Text>
+              )}
             </View>
             <View style={styles.onlineDot} />
           </View>
@@ -120,6 +131,7 @@ const styles = StyleSheet.create({
   membersRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   avatarWrap: { position: 'relative' },
   avatar: { width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  avatarImage: { width: 34, height: 34, borderRadius: 17 },
   avatarText: { fontSize: 11, fontWeight: '700' },
   onlineDot: { position: 'absolute', bottom: 0, right: 0, width: 8, height: 8, borderRadius: 4, backgroundColor: '#05e777', borderWidth: 1, borderColor: '#0d1516' },
   moreAvatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#242b2d', alignItems: 'center', justifyContent: 'center' },

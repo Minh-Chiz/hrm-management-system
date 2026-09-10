@@ -28,45 +28,59 @@ export const CompanyAttendanceChartCard: React.FC<CompanyAttendanceChartCardProp
   const avgRate = Math.round(sourceData.reduce((acc, curr) => acc + curr.rate, 0) / sourceData.length);
   const highestDay = [...sourceData].sort((a, b) => b.rate - a.rate)[0];
 
-  // Chuẩn bị dữ liệu cho react-native-gifted-charts BarChart
-  const barData = sourceData.map((item) => {
-    // Màu sắc theo hiệu suất: 100% -> #05e777 (Xanh lá), >=92% -> #00daf3 (Cyan), <90% -> #f59e0b (Vàng cam)
-    const color = item.rate === 100 ? '#05e777' : item.rate >= 90 ? '#00daf3' : '#f59e0b';
+  // Màu sắc theo hiệu suất
+  const getColor = (rate: number) =>
+    rate === 100 ? '#05e777' : rate >= 90 ? '#00daf3' : '#f59e0b';
 
-    return {
-      value: item.rate,
-      label: item.day,
-      frontColor: color,
-      topLabelComponent: () => (
-        <Text style={[styles.topLabelText, { color }]}>{item.rate}%</Text>
-      ),
-    };
-  });
+  // Chuẩn bị dữ liệu cho BarChart — KHÔNG dùng topLabelComponent
+  const barData = sourceData.map((item) => ({
+    value: item.rate,
+    label: item.day,
+    frontColor: getColor(item.rate),
+  }));
 
   // Tính toán kích thước co giãn theo màn hình
-  // Chiều rộng khả dụng = screenWidth - padding 2 bên (32) - card padding (32)
   const availableWidth = Math.max(260, screenWidth - 72);
   const barWidth = screenWidth < 380 ? 22 : 28;
   const spacing = Math.max(16, Math.floor((availableWidth - barWidth * 5 - 45) / 5));
+
+  // gifted-charts: yAxisLabelWidth mặc định ~35px, initialSpacing = spacing/2
+  const YAXIS_W = 35;
+  const initialSpacing = Math.floor(spacing / 2);
+  const CHART_HEIGHT = 150;
+  const MAX_VALUE = 100;
 
   return (
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.iconCircle}>
-            <MaterialIcons name="bar-chart" size={18} color="#00daf3" />
-          </View>
-          <View>
-            <Text style={styles.cardTitle}>Tỷ Lệ Chuyên Cần 5 Ngày Gần Nhất</Text>
-            <Text style={styles.cardSubtitle}>Thống kê tuần làm việc (Thứ 2 - Thứ 6)</Text>
-          </View>
+        <View style={styles.iconCircle}>
+          <MaterialIcons name="bar-chart" size={18} color="#00daf3" />
         </View>
-
+        <View style={styles.headerCenter}>
+          <Text style={styles.cardTitle} numberOfLines={1}>Tỷ Lệ Chuyên Cần 5 Ngày Gần Nhất</Text>
+          <Text style={styles.cardSubtitle} numberOfLines={1}>Thống kê tuần làm việc (Thứ 2 - Thứ 6)</Text>
+        </View>
         <View style={styles.avgBadge}>
-          <Text style={styles.avgBadgeLabel}>Trung bình:</Text>
+          <Text style={styles.avgBadgeLabel}>TB:</Text>
           <Text style={styles.avgBadgeValue}>{avgRate}%</Text>
         </View>
+      </View>
+
+      {/* Nhãn số % — render NGOÀI chart, không bao giờ bị clip */}
+      <View style={styles.labelsRow}>
+        {/* khoảng trống tương đương phần trục Y */}
+        <View style={{ width: YAXIS_W + initialSpacing }} />
+        {sourceData.map((item, i) => {
+          const color = getColor(item.rate);
+          return (
+            <View key={i} style={styles.labelItem}>
+              <Text style={[styles.labelText, { color }]} numberOfLines={1}>
+                {item.rate}%
+              </Text>
+            </View>
+          );
+        })}
       </View>
 
       {/* Bar Chart Container */}
@@ -85,8 +99,8 @@ export const CompanyAttendanceChartCard: React.FC<CompanyAttendanceChartCardProp
           yAxisTextStyle={styles.axisText}
           xAxisLabelTextStyle={styles.axisLabelText}
           noOfSections={4}
-          maxValue={100}
-          height={135}
+          maxValue={MAX_VALUE}
+          height={CHART_HEIGHT}
           width={availableWidth - 10}
           isAnimated
           animationDuration={600}
@@ -137,14 +151,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 10,
+    marginBottom: 12,
+  },
+  headerCenter: {
     flex: 1,
+    flexShrink: 1,
   },
   iconCircle: {
     width: 34,
@@ -186,17 +198,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#00daf3',
   },
+  /* Nhãn số % thủ công */
+  labelsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  labelItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  labelText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
   chartWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
-    overflow: 'hidden',
-  },
-  topLabelText: {
-    fontSize: 9,
-    fontWeight: '700',
-    marginBottom: 4,
-    textAlign: 'center',
+    marginTop: -2,
   },
   axisText: {
     color: '#849396',

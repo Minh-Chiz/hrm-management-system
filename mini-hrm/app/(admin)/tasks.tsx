@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -52,6 +54,7 @@ export default function AdminTasksScreen({ hideBackButton = false }: { hideBackB
   const router = useRouter();
   const { data: tasks = [] } = useTasksQuery();
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
+  const [selectedTask, setSelectedTask] = useState<(typeof tasks)[0] | null>(null);
 
 
   // Route Guard: only admin can access this screen
@@ -161,10 +164,14 @@ export default function AdminTasksScreen({ hideBackButton = false }: { hideBackB
         ) : (
           filteredTasks.map((task) => {
             const s = getTaskStyle(task.statusType);
+            const prog = task.progress || 0;
+            const progColor = prog === 100 ? '#05e777' : prog < 50 && task.status === 'Trễ hạn' ? '#ff4d4d' : '#00e5ff';
             return (
-              <View
+              <TouchableOpacity
                 key={task.id}
                 style={[styles.taskCard, { borderLeftColor: s.border }]}
+                onPress={() => setSelectedTask(task)}
+                activeOpacity={0.8}
               >
                 <View style={styles.taskCardTop}>
                   <Text style={styles.taskTitle}>{task.title}</Text>
@@ -191,26 +198,34 @@ export default function AdminTasksScreen({ hideBackButton = false }: { hideBackB
                   </View>
                 </View>
 
-                {/* Progress Bar & Slow Progress Warning */}
-                <View style={{ marginVertical: 8, gap: 4 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 11, color: '#bac9cc', fontWeight: '600' }}>
-                      {task.isMasterProject ? 'Tiến độ Tổng Dự án Lớn (Cộng dồn 3 chặng):' : task.masterTaskId ? `Tiến độ Chặng (${getStageBadge(task.pipelineStage).label}):` : 'Tiến độ:'}
+                {/* Progress Bar */}
+                <View style={{ marginVertical: 8, gap: 6 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                    <Text style={{ fontSize: 11, color: '#bac9cc', fontWeight: '600', flex: 1, marginRight: 8 }}>
+                      {task.isMasterProject ? 'Tiến độ Tổng Dự án Lớn:' : task.masterTaskId ? `Tiến độ Chặng (${getStageBadge(task.pipelineStage).label}):` : 'Tiến độ:'}
                     </Text>
-                    <Text style={{ fontSize: 11, color: (task.progress || 0) < 50 && task.status === 'Trễ hạn' ? '#ff4d4d' : '#00e5ff', fontWeight: '700' }}>
-                      {task.progress || 0}%
-                    </Text>
+                    <View style={[styles.progBadge, { backgroundColor: `${progColor}22`, borderColor: `${progColor}55` }]}>
+                      <Text style={{ fontSize: 11, color: progColor, fontWeight: '800', minWidth: 34, textAlign: 'center' }}>
+                        {prog}%
+                      </Text>
+                    </View>
                   </View>
 
-                  <View style={{ height: 6, backgroundColor: 'rgba(59, 73, 76, 0.4)', borderRadius: 999, overflow: 'hidden' }}>
+                  <View style={styles.progressTrack}>
                     <View
-                      style={{
-                        height: '100%',
-                        width: `${task.progress || 0}%`,
-                        backgroundColor: (task.progress || 0) === 100 ? '#05e777' : (task.progress || 0) < 50 && task.status === 'Trễ hạn' ? '#ff4d4d' : '#00e5ff',
-                      }}
+                      style={[
+                        styles.progressFill,
+                        { width: `${prog}%`, backgroundColor: progColor },
+                      ]}
                     />
                   </View>
+
+                  {prog === 100 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <MaterialIcons name="check-circle" size={12} color="#05e777" />
+                      <Text style={{ fontSize: 10, color: '#05e777', fontWeight: '600' }}>Hoàn thành 100%</Text>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.taskCardBottom}>
@@ -230,16 +245,18 @@ export default function AdminTasksScreen({ hideBackButton = false }: { hideBackB
                     )}
 
                     <View style={styles.dueRow}>
-                      <MaterialIcons
-                        name="schedule"
-                        size={13}
-                        color="#849396"
-                      />
+                      <MaterialIcons name="schedule" size={13} color="#849396" />
                       <Text style={styles.dueText}>{task.deadline}</Text>
                     </View>
                   </View>
                 </View>
-              </View>
+
+                {/* Tap hint */}
+                <View style={styles.tapHint}>
+                  <MaterialIcons name="open-in-new" size={10} color="#3b494c" />
+                  <Text style={styles.tapHintText}>Nhấn để xem chi tiết</Text>
+                </View>
+              </TouchableOpacity>
             );
           })
         )}
@@ -255,6 +272,120 @@ export default function AdminTasksScreen({ hideBackButton = false }: { hideBackB
         <MaterialIcons name="add" size={24} color="#00363d" />
         <Text style={styles.fabText}>Giao việc mới</Text>
       </TouchableOpacity>
+
+      {/* Task Detail Modal */}
+      <Modal
+        visible={!!selectedTask}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedTask(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setSelectedTask(null)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            {selectedTask && (() => {
+              const s = getTaskStyle(selectedTask.statusType);
+              const prog = selectedTask.progress || 0;
+              const progColor = prog === 100 ? '#05e777' : prog < 50 && selectedTask.status === 'Trễ hạn' ? '#ff4d4d' : '#00e5ff';
+              const stage = selectedTask.pipelineStage ? getStageBadge(selectedTask.pipelineStage) : null;
+              return (
+                <>
+                  {/* Modal Handle */}
+                  <View style={styles.modalHandle} />
+
+                  {/* Modal Header */}
+                  <View style={styles.modalHeader}>
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {selectedTask.isMasterProject && (
+                          <View style={[styles.statusPill, { backgroundColor: 'rgba(0,229,255,0.15)', borderColor: '#00daf3', borderWidth: 1 }]}>
+                            <Text style={[styles.statusText, { color: '#00daf3' }]}>🚀 DỰ ÁN LỚN</Text>
+                          </View>
+                        )}
+                        {stage && (
+                          <View style={[styles.statusPill, { backgroundColor: stage.bg }]}>
+                            <Text style={[styles.statusText, { color: stage.text }]}>{stage.label}</Text>
+                          </View>
+                        )}
+                        <View style={[styles.statusPill, { backgroundColor: s.pill }]}>
+                          <Text style={[styles.statusText, { color: s.text }]}>{selectedTask.status}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.modalTitle}>{selectedTask.title}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setSelectedTask(null)} style={styles.modalClose}>
+                      <MaterialIcons name="close" size={20} color="#bac9cc" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                    {/* Progress Section */}
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalSectionTitle}>Tiến độ</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                        <View style={{ flex: 1 }}>
+                          <View style={[styles.progressTrack, { height: 10 }]}>
+                            <View style={[styles.progressFill, { width: `${prog}%`, backgroundColor: progColor, borderRadius: 999 }]} />
+                          </View>
+                        </View>
+                        <View style={[styles.progBadgeLg, { backgroundColor: `${progColor}22`, borderColor: `${progColor}55` }]}>
+                          <Text style={{ fontSize: 18, fontWeight: '800', color: progColor }}>{prog}%</Text>
+                        </View>
+                      </View>
+                      {prog === 100 && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(5,231,119,0.08)', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(5,231,119,0.2)' }}>
+                          <MaterialIcons name="check-circle" size={16} color="#05e777" />
+                          <Text style={{ fontSize: 13, color: '#05e777', fontWeight: '700' }}>Công việc đã hoàn thành 100%!</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Info rows */}
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalSectionTitle}>Thông tin</Text>
+                      <View style={styles.infoGrid}>
+                        <View style={styles.infoRow}>
+                          <MaterialIcons name="person" size={15} color="#849396" />
+                          <Text style={styles.infoLabel}>Người thực hiện</Text>
+                          <Text style={styles.infoValue}>{selectedTask.assigneeName}</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                          <MaterialIcons name="schedule" size={15} color="#849396" />
+                          <Text style={styles.infoLabel}>Deadline</Text>
+                          <Text style={[styles.infoValue, selectedTask.status === 'Trễ hạn' && { color: '#ff4d4d' }]}>
+                            {selectedTask.deadline}
+                          </Text>
+                        </View>
+                        {selectedTask.budget && (
+                          <View style={styles.infoRow}>
+                            <MaterialIcons name="account-balance-wallet" size={15} color="#849396" />
+                            <Text style={styles.infoLabel}>Ngân sách</Text>
+                            <Text style={[styles.infoValue, { color: '#7dffa2' }]}>{selectedTask.budget}</Text>
+                          </View>
+                        )}
+                        {selectedTask.pipelineStage && (
+                          <View style={styles.infoRow}>
+                            <MaterialIcons name="timeline" size={15} color="#849396" />
+                            <Text style={styles.infoLabel}>Giai đoạn</Text>
+                            <Text style={[styles.infoValue, { color: stage?.text }]}>{stage?.label}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Description if exists */}
+                    {(selectedTask as any).description && (
+                      <View style={styles.modalSection}>
+                        <Text style={styles.modalSectionTitle}>Mô tả</Text>
+                        <Text style={{ fontSize: 13, color: '#bac9cc', lineHeight: 20 }}>{(selectedTask as any).description}</Text>
+                      </View>
+                    )}
+                  </ScrollView>
+                </>
+              );
+            })()}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -349,7 +480,43 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(59, 73, 76, 0.35)',
     borderLeftWidth: 4,
     position: 'relative',
+  },
+  progressTrack: {
+    height: 7,
+    backgroundColor: 'rgba(59, 73, 76, 0.5)',
+    borderRadius: 999,
     overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  progBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  progBadgeLg: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    minWidth: 70,
+  },
+  tapHint: {
+    position: 'absolute',
+    bottom: 6,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    opacity: 0.5,
+  },
+  tapHintText: {
+    fontSize: 9,
+    color: '#3b494c',
   },
   taskCardTop: {
     flexDirection: 'row',
@@ -438,5 +605,91 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#00363d',
+  },
+
+  /* Modal */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#151d1e',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
+    maxHeight: '85%',
+    borderTopWidth: 1,
+    borderColor: 'rgba(0, 218, 243, 0.15)',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(132, 147, 150, 0.4)',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(59, 73, 76, 0.3)',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#dce4e5',
+    lineHeight: 24,
+  },
+  modalClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  modalSection: {
+    marginBottom: 20,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 73, 76, 0.25)',
+  },
+  modalSectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#849396',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 12,
+  },
+  infoGrid: {
+    gap: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  infoLabel: {
+    fontSize: 13,
+    color: '#849396',
+    flex: 1,
+  },
+  infoValue: {
+    fontSize: 13,
+    color: '#dce4e5',
+    fontWeight: '600',
+    textAlign: 'right',
+    flexShrink: 1,
   },
 });

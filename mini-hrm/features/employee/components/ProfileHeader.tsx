@@ -22,9 +22,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           </View>
           <View style={styles.onlineDot} />
         </View>
-        <View>
-          <Text style={styles.headerName}>{user?.name ?? 'Nhân viên'}</Text>
-          <Text style={styles.headerPosition}>
+        <View style={styles.nameBlock}>
+          <Text style={styles.headerName} numberOfLines={1}>{user?.name ?? 'Nhân viên'}</Text>
+          <Text style={styles.headerPosition} numberOfLines={1}>
             {user?.role === 'employee' ? 'Nhân viên' : 'Trưởng nhóm'} - {user?.specialization || 'Chuyên viên'}
           </Text>
         </View>
@@ -39,20 +39,21 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <MaterialIcons name="post-add" size={22} color="#00daf3" />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.iconBtn}
-          activeOpacity={0.7}
-          onPress={onOpenNotificationModal}
-        >
-          <View>
+        {/* Badge đặt ngoài TouchableOpacity để tránh bị clip bởi borderRadius trên Android */}
+        <View style={styles.notiWrapper}>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            activeOpacity={0.7}
+            onPress={onOpenNotificationModal}
+          >
             <MaterialIcons name="notifications-none" size={22} color="#bac9cc" />
-            {unreadNotiCount > 0 && (
-              <View style={styles.notiBadge}>
-                <Text style={styles.notiBadgeText}>{unreadNotiCount}</Text>
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+          {unreadNotiCount > 0 && (
+            <View style={styles.notiBadge}>
+              <Text style={styles.notiBadgeText}>{unreadNotiCount}</Text>
+            </View>
+          )}
+        </View>
 
         <TouchableOpacity style={styles.iconBtn} onPress={onLogout} activeOpacity={0.7}>
           <MaterialIcons name="logout" size={20} color="#ff4d4f" />
@@ -77,6 +78,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+    flexShrink: 1,
+  },
+  nameBlock: {
+    flex: 1,
+    flexShrink: 1,
   },
   headerRight: {
     flexDirection: 'row',
@@ -135,6 +142,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(0,218,243,0.45)',
   },
+  notiWrapper: {
+    position: 'relative',
+  },
   notiBadge: {
     position: 'absolute',
     top: -4,
@@ -148,6 +158,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#0d1516',
     paddingHorizontal: 2,
+    zIndex: 10,
   },
   notiBadgeText: {
     fontSize: 8,
