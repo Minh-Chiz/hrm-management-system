@@ -1,96 +1,178 @@
-# 🏢 HRM Management System (Expo / React Native)
+# 🏢 Mini HRM - Hệ Thống Quản Trị Nhân Sự & Chấm Công Nội Bộ
 
-Hệ thống Quản lý Nhân sự (Human Resource Management System) đa nền tảng dành cho thiết bị di động, được phát triển trên nền tảng **React Native (Expo Router)**. Hệ thống phân quyền chặt chẽ cho 3 nhóm người dùng chính: **Admin**, **Team Lead**, và **Employee**.
+![React Native](https://img.shields.io/badge/React%20Native-Expo-61DAFB?logo=react&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
+![Prisma](https://img.shields.io/badge/ORM-Prisma-2D3748?logo=prisma&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white)
+![License](https://img.shields.io/badge/License-Internal-lightgrey)
+
+Hệ thống Quản lý Nhân sự (Human Resource Management) đa nền tảng dành cho thiết bị di động, được xây dựng trên nền tảng **React Native (Expo)** kết hợp với máy chủ **Node.js Express & Prisma ORM**. Ứng dụng hỗ trợ vận hành doanh nghiệp thu nhỏ với cơ chế phân quyền chặt chẽ cho 3 vai trò: **Admin (HR)**, **Team Lead**, và **Employee**.
 
 ---
 
-## 💼 Internship Credits
+## 📑 Mục Lục
 
-* **Thực tập sinh:** Hoàng Minh Chí - *Software Developer Intern*
-* **Mentor hướng dẫn (Doanh nghiệp):** Anh Minh ([minhdc.reactnative@gmail.com](mailto:minhdc.reactnative@gmail.com)) - *Dev-Team*
-* **Đơn vị thực tập:** Công ty cổ phần VACOM
-* **Giảng viên hướng dẫn (Trường):** TS.Trần Đăng Công - *Khoa CNTT, Đại học Đại Nam*
+- [Thông Tin Đồ Án / Internship Credits](#-thông-tin-đồ-án--internship-credits)
+- [Kiến Trúc Hệ Thống](#-kiến-trúc-hệ-thống-monorepo-architecture)
+- [Công Nghệ Sử Dụng](#️-công-nghệ-sử-dụng-tech-stack)
+- [Các Tính Năng Cốt Lõi](#-các-tính-năng-cốt-lõi)
+- [Hướng Dẫn Khởi Chạy Cục Bộ](#-hướng-dẫn-khởi-chạy-cục-bộ-local-setup)
+- [Tài Khoản Trải Nghiệm Mẫu](#-tài-khoản-trải-nghiệm-mẫu-demo-accounts)
+- [Quy Chuẩn Đóng Góp & Commit](#-quy-chuẩn-đóng-góp--commit-git-workflow)
+
 ---
 
-## 📌 Tổng quan kiến trúc Monorepo
+## 💼 Thông Tin Đồ Án / Internship Credits
 
-Dự án được tổ chức theo mô hình Monorepo gồm 2 phần chính:
+| Vai trò | Thông tin |
+|---|---|
+| **Thực tập sinh** | Hoàng Minh Chí - Software Developer Intern |
+| **Đơn vị thực tập** | Công ty Cổ phần VACOM |
+| **Mentor hướng dẫn (Doanh nghiệp)** | Anh Minh ([minhdc.reactnative@gmail.com](mailto:minhdc.reactnative@gmail.com)) - Dev-Team |
+| **Giảng viên hướng dẫn (Trường)** | TS. Trần Đăng Công - Khoa CNTT, Trường Đại học Đại Nam |
 
-```text
+---
+
+## 📌 Kiến Trúc Hệ Thống (Monorepo Architecture)
+
+Dự án được tổ chức theo mô hình **Monorepo** gồm 2 phần độc lập:
+
+```
 hrm-management-system/
-├── mini-hrm/          # Cross-platform Mobile App (React Native / Expo)
-├── server/            # RESTful API Backend (Node.js / Express / Prisma)
+├── mini-hrm/                   # Frontend: Ứng dụng di động React Native (Expo)
+│   ├── app/                    # File-based routing theo từng vai trò
+│   │   ├── (admin)/            # Giao diện & tính năng dành cho Admin/HR
+│   │   ├── (teamlead)/         # Giao diện quản lý đội ngũ của Trưởng nhóm
+│   │   ├── (employee)/         # Giao diện chấm công, công việc của Nhân viên
+│   │   └── login.tsx           # Màn hình đăng nhập & điều hướng thông minh
+│   ├── components/             # Reusable UI components, Modals cắt ảnh, hộp thoại
+│   ├── features/               # Module nghiệp vụ chuyên biệt theo từng Role
+│   ├── hooks/                  # Custom hooks (useWifiCheck, useShiftTimer, Queries)
+│   ├── services/               # Cấu hình Axios Interceptors, API Client
+│   └── store/                  # Quản lý State toàn cục bằng Zustand
+│
+├── server/                     # Backend: Dịch vụ RESTful API Server (Express + Prisma)
+│   ├── prisma/                 # Định nghĩa Schema Database & Script Seed dữ liệu
+│   ├── src/
+│   │   ├── controllers/        # Điều phối xử lý logic request & response
+│   │   ├── middlewares/        # Xác thực JWT, kiểm tra Role-Based Guard, Validate
+│   │   ├── routes/             # Định tuyến các API endpoints
+│   │   └── services/           # Tầng nghiệp vụ tương tác với cơ sở dữ liệu
+│   └── .env.example            # Cấu hình mẫu biến môi trường
 └── README.md
 ```
 
-## 🛠️ Công nghệ sử dụng (Tech Stack)
-**1. Front-end (`mini-hrm/`)**
-* **Framework:** React Native (Expo SDK)
-* **Router:** Expo Router (File-based Routing)
-* **State Management:** Zustand, React Query (TanStack Query)
-* **Form & Validation:** React Hook Form, Zod
-* **UI/UX:** NativeWind (TailwindCSS for React Native), Custom Modals & Components
+---
 
-**2. Back-end (`server/`)**
-* **Runtime & Framework:** Node.js, Express.js (TypeScript)
-* **ORM & Database:** Prisma ORM, SQLite / PostgreSQL
-* **Authentication:** JWT (JSON Web Token), Bcrypt
-* **Architecture:** Controller - Service - Route Pattern, DTO Validation
+## 🛠️ Công Nghệ Sử Dụng (Tech Stack)
 
-## 🚀 Hướng dẫn cài đặt & Chạy dự án
-**📋 Yêu cầu hệ thống**
-* **Node.js:** `>= 18.x`
-* **npm** hoặc **yarn**
-* **Expo Go App** trên điện thoại (Android/iOS) hoặc Trình giả lập (Emulator).
+### 1. Front-end Mobile (`mini-hrm/`)
 
-**1. Cấu hình & Chạy Back-end Server (`server/`)**
-```
-# Di chuyển vào thư mục server
+- **Core:** React Native (Expo SDK), TypeScript.
+- **Routing:** Expo Router (File-based Routing, Groups theo Role `(admin)`, `(teamlead)`, `(employee)`).
+- **State Management:**
+  - *Global State:* Zustand (quản lý Auth Session, Thông báo).
+  - *Server State:* TanStack React Query v5 (caching, revalidation dữ liệu ngầm).
+- **Form & Validation:** React Hook Form kết hợp Zod schema.
+- **UI/UX:** NativeWind (Tailwind CSS cho React Native), Feather/Ionicons Icons.
+- **Device Features:** Kiểm tra kết nối mạng (Wi-Fi), Bộ đếm thời gian ca thực (`useShiftTimer`), Crop & Upload ảnh đại diện.
+
+### 2. Back-end Server (`server/`)
+
+- **Runtime & Framework:** Node.js, Express.js (TypeScript).
+- **ORM & Database:** Prisma ORM, cơ sở dữ liệu SQLite (`dev.db`).
+- **Bảo mật:** JSON Web Token (JWT), mã hóa mật khẩu một chiều Bcrypt.
+- **Kiến trúc:** Layered Architecture (Routes → Middlewares → Controllers → Services → Prisma Client).
+- **Validation:** Express Middleware Validator kết hợp Zod DTOs.
+
+---
+
+## ✨ Các Tính Năng Cốt Lõi
+
+| Phân hệ | Tính năng chi tiết |
+|---|---|
+| 🔐 **Xác thực & Phân quyền** | - Đăng nhập tài khoản, ghi nhớ phiên làm việc bằng JWT token.<br>- Tự động điều hướng đúng giao diện theo Role (`ADMIN`, `TEAM_LEAD`, `EMPLOYEE`).<br>- Hỗ trợ luồng quên mật khẩu (forgot-password). |
+| ⏱️ **Chấm công Thông minh** | - Xác thực kết nối mạng Wi-Fi công ty trước khi mở quyền Check-in.<br>- Bộ đếm thời gian ca làm việc trực quan (`useShiftTimer`).<br>- Hộp thoại xác nhận và nhập lý do khi Check-out sớm trước giờ quy định. |
+| 📋 **Quản lý Công việc (Tasks)** | - Phân công công việc theo cá nhân hoặc dự án.<br>- Thiết lập độ ưu tiên, hạn chót (deadline) và cập nhật trạng thái (`TODO`, `IN_PROGRESS`, `COMPLETED`).<br>- Team Lead theo dõi tổng thể tiến độ các thành viên trong nhóm. |
+| 📄 **Yêu cầu & Phê duyệt** | - Nhân viên gửi đơn xin nghỉ phép, xin đi muộn / về sớm.<br>- Cấp quản lý (Lead/Admin) nhận danh sách chờ duyệt và thực hiện Duyệt/Từ chối trực tiếp. |
+| 🔔 **Thông báo & Cá nhân hóa** | - Nhận thông báo sự kiện khi có task mới hoặc đơn từ được duyệt.<br>- Cập nhật hồ sơ cá nhân, hỗ trợ chọn và cắt tỉa ảnh đại diện (Crop Image). |
+
+---
+
+## 🚀 Hướng Dẫn Khởi Chạy Cục Bộ (Local Setup)
+
+### 📋 Yêu Cầu Cần Có
+
+- **Node.js:** phiên bản 18.x trở lên.
+- **Trình quản lý gói:** npm (hoặc yarn / pnpm).
+- **Thiết bị chạy:** Ứng dụng Expo Go trên điện thoại thật (cùng mạng Wi-Fi) hoặc máy ảo (Android Studio Emulator / iOS Simulator).
+
+### Bước 1: Khởi Động Backend Server (`server/`)
+
+Mở Terminal tại thư mục gốc và di chuyển vào `server`:
+
+```bash
 cd server
 
-# Cài đặt các thư viện
+# 1. Cài đặt các thư viện
 npm install
 
-# Tạo file môi trường .env (hoặc copy từ .env.example)
+# 2. Tạo file cấu hình môi trường từ mẫu
 cp .env.example .env
 
-# Chạy Migration cơ sở dữ liệu Prisma
-npx prisma migrate dev --name init
+# 3. Đồng bộ schema vào cơ sở dữ liệu SQLite
+npx prisma db push
 
-# (Tùy chọn) Seed dữ liệu mẫu ban đầu
+# 4. Nạp dữ liệu mẫu ban đầu (nhân viên, ca làm, task)
 npx prisma db seed
 
-# Khởi chạy server ở chế độ Development
+# 5. Khởi chạy máy chủ API
 npm run dev
 ```
-*(Server sẽ mặc định chạy tại: `http://localhost:5000`)*
 
-**2. Cấu hình & Chạy Front-end App (`mini-hrm/`)**
-```
-# Mở một cửa sổ Terminal mới và di chuyển vào thư mục mini-hrm
+> Mặc định API Server sẽ lắng nghe tại: `http://localhost:5000`
+
+### Bước 2: Khởi Động Ứng Dụng Di Động (`mini-hrm/`)
+
+Mở một cửa sổ Terminal mới và di chuyển vào `mini-hrm`:
+
+```bash
 cd mini-hrm
 
-# Cài đặt các thư viện
+# 1. Cài đặt các thư viện
 npm install
 
-# Khởi chạy ứng dụng Expo
+# 2. Khởi chạy dự án với Expo
 npx expo start
 ```
-* **Dùng điện thoại thật:** Quét mã QR hiển thị ở Terminal bằng ứng dụng **Expo Go**.
-* **Dùng giả lập:** Bấm `a` để mở Android Emulator hoặc `i` để mở iOS Simulator.
 
-## ✨ Các tính năng chính
-* **🔐 Xác thực & Phân quyền (Authentication & Authorization):**
-  * Đăng nhập, quên mật khẩu, phân quyền theo vai trò (Admin, Teamlead, Employee).
-* **⏱️ Chấm công (Check-in / Check-out):**
-  * Ghi nhận thời gian ca làm việc, hỗ trợ kiểm tra kết nối WiFi/Vị trí.
-* **📋 Quản lý công việc (Task Management):**
-  * Giao việc, cập nhật tiến độ, danh sách công việc theo dự án và cá nhân.
-* **📄 Yêu cầu & Phê duyệt (Requests & Approvals):**
-  * Tạo đơn xin nghỉ phép/đi muộn/về sớm và ban quản lý phê duyệt trực tiếp.
-* **🔔 Thông báo (Notifications):**
-  * Hệ thống thông báo thời gian thực cho các sự kiện duyệt đơn và phân công việc.
+> ⚠️ **Lưu ý quan trọng khi test trên điện thoại thật:**
+> Nếu bạn quét mã QR qua ứng dụng Expo Go trên điện thoại, điện thoại sẽ **không thể** gọi đến `localhost`. Hãy mở file cấu hình API tại `mini-hrm/config/api.ts` (hoặc file cấu hình tương ứng) và đổi `localhost` thành địa chỉ IP mạng LAN của máy tính (Ví dụ: `http://192.168.1.15:5000/api`).
 
-## 📝 Quy chuẩn đóng góp Code (Git Workflow)
-1. Giữ các thông tin nhạy cảm (như `DATABASE_URL`, `JWT_SECRET`) trong file `.env` và **không push** `.env` lên Git.
-2. Viết commit message theo chuẩn Conventional Commits (ví dụ: `feat:`, `fix:`, `refactor:`, `docs:`).
+---
+
+## 👥 Tài Khoản Trải Nghiệm Mẫu (Demo Accounts)
+
+Sau khi chạy lệnh `npx prisma db seed`, cơ sở dữ liệu đã có sẵn các tài khoản thử nghiệm tương ứng với từng vai trò. Bạn có thể kiểm tra trực tiếp danh sách tài khoản trong file `server/prisma/seed.ts` hoặc mở giao diện trực quan bằng lệnh:
+
+```bash
+# Chạy tại thư mục server
+npx prisma studio
+```
+
+Mở trình duyệt tại `http://localhost:5555` → Chọn bảng **User** để xem toàn bộ danh sách Email và mật khẩu đã khởi tạo.
+
+---
+
+## 📝 Quy Chuẩn Đóng Góp & Commit (Git Workflow)
+
+**Bảo mật:** Không bao giờ đẩy file môi trường `.env`, file cơ sở dữ liệu `*.db`, hoặc thư mục `node_modules` lên Git.
+
+**Quy chuẩn thông điệp Commit:** Tuân thủ chuẩn [Conventional Commits](https://www.conventionalcommits.org/):
+
+| Prefix | Ý nghĩa |
+|---|---|
+| `feat:` | Tính năng mới hoàn chỉnh. |
+| `fix:` | Vá lỗi trong quá trình phát triển. |
+| `refactor:` | Tái cấu trúc mã nguồn mà không thay đổi nghiệp vụ. |
+| `docs:` | Cập nhật tài liệu kỹ thuật hoặc README. |
